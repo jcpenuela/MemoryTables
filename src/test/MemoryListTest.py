@@ -4,7 +4,7 @@ Created on 08/08/2013
 @author: jcpenuela
 '''
 import unittest
-from MemoryListTable import MemoryListTable
+from MemoryTable import MemoryTable
 import Fact as fact
 
 
@@ -12,7 +12,7 @@ class MemoryListTest(unittest.TestCase):
 
 
     def setUp(self):
-        self.tabla = MemoryListTable()
+        self.tabla = MemoryTable()
 
 
     def tearDown(self):
@@ -33,7 +33,20 @@ class MemoryListTest(unittest.TestCase):
         
         t.update_element(f, 2, False)
         self.assertEqual(t[2].fact, "DOS" )
+
+
+    def testIndex(self):
+        t = self.tabla
         
+        f = fact.Fact("uno")
+        t.add_element(f)
+        f = fact.Fact("dos")
+        t.add_element(f)
+        f = fact.Fact("tres")
+        t.add_element(f)
+
+        t._index_by('hecho', f.content)
+ 
 
 
 
