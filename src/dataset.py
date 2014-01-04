@@ -6,10 +6,10 @@ Created on 08/08/2013
 import copy
 # import types
 # import MemoryListIndex as ix
-import Fact as fact
+import fact
 
 
-class MemoryTable(object):
+class Dataset(object):
     
     def __init__(self):
         self.elements = dict()     # nodes in memory 
@@ -128,7 +128,7 @@ class MemoryTable(object):
         Retorna el id del nodo
         '''
         if id_element not in self.elements:
-            raise Exception('MemoryTable.update_element','Element ID non existent in table')
+            raise Exception('Dataset.update_element','Element ID non existent in table')
         
         # elimino las entradas de índices
         self.unindex_element(id_element)
@@ -166,7 +166,7 @@ class MemoryTable(object):
         elements = []
         n = 0
         if index_name not in self.index_list:
-            raise Exception('MemoryTable.get_element_by','Index [' + index_name + '] not exists.' )
+            raise Exception('Dataset.get_element_by','Index [' + index_name + '] not exists.' )
         
         for element_ids_list in sorted(self.index_list[index_name]['keys']):
             n+=1
@@ -187,7 +187,7 @@ class MemoryTable(object):
         elements = []
         n = 0
         if index_name not in self.index_list:
-            raise Exception('MemoryTable.get_element_by','Index [' + index_name + '] not exists.' )
+            raise Exception('Dataset.get_element_by','Index [' + index_name + '] not exists.' )
         
         print((self.index_list[index_name]['keys']))
         for element_ids_list in sorted((self.index_list[index_name]['keys']).keys()):
@@ -217,7 +217,7 @@ class MemoryTable(object):
         n = 0
         
         if index_name not in self.index_list:
-            raise Exception('MemoryTable.select_element_ids_where_value','Index [' + index_name + '] not exists.' )
+            raise Exception('Dataset.select_element_ids_where_value','Index [' + index_name + '] not exists.' )
         
         if value not in self.index_list[index_name]['keys']:
             return None
@@ -238,7 +238,7 @@ class MemoryTable(object):
         None en caso contrario
         '''
         if index_name not in self.index_list:
-            raise Exception('MemoryTable.select_elements_where_value','Index [' + index_name + '] not exists.' )
+            raise Exception('Dataset.select_elements_where_value','Index [' + index_name + '] not exists.' )
         
         if value not in self.index_list[index_name]['keys']:
             return None
@@ -262,7 +262,7 @@ class MemoryTable(object):
     
     def index_by(self, index_name, expresion):
         if index_name[0] == '_':
-            raise Exception('MemoryTable._index_by','Index name [' + index_name + '] can not start with underscore (reserved).')
+            raise Exception('Dataset._index_by','Index name [' + index_name + '] can not start with underscore (reserved).')
         return self._index_by(index_name, expresion)
     
          
@@ -285,7 +285,7 @@ class MemoryTable(object):
         Devuelve una tupla con dos elementos (número de claves y número de elementos)
         '''
         if index_name in self.index_list:
-            raise Exception('MemoryTable.index_by','Index [' + index_name + '] already exists.')
+            raise Exception('Dataset.index_by','Index [' + index_name + '] already exists.')
         
         
         # t = type(function_name)
@@ -302,7 +302,7 @@ class MemoryTable(object):
             code = expresion[1:]
             
         elif expresion[0] == '_':
-            # expresión interna a la clase MemoryTable
+            # expresión interna a la clase Dataset
             if expresion == '_insert':
                 # orden de entrada
                 code = 'element_id'
@@ -350,7 +350,7 @@ class MemoryTable(object):
                 # DEBUG
                 # print(self.elements[element_id].content)
             except NameError:
-                raise Exception('MemoryTable.index_by','Index [' + index_name + ']. Index expression [' + expresion + '] fails.' )
+                raise Exception('Dataset.index_by','Index [' + index_name + ']. Index expression [' + expresion + '] fails.' )
             
             # el valor retornado por la ejecución del código de generación de clave
             # se inserta
@@ -384,7 +384,7 @@ class MemoryTable(object):
                 #DEBUG
                 # print(value)
             except NameError:
-                raise Exception('MemoryTable.index_element','Index [' + index_name + ']. Index code [' + code + '] fails.' )
+                raise Exception('Dataset.index_element','Index [' + index_name + ']. Index code [' + code + '] fails.' )
             
             # el valor retornado por la ejecución del código de generación de clave
             # se inserta
@@ -413,7 +413,7 @@ class MemoryTable(object):
                 # DEBUG
                 # print(value)
             except NameError:
-                raise Exception('MemoryTable.unindex_element','Index [' + index_name + ']. Index code [' + code + '] fails.' )
+                raise Exception('Dataset.unindex_element','Index [' + index_name + ']. Index code [' + code + '] fails.' )
             
             # el valor retornado por la ejecución del código de generación de clave
             # se borra de la lista de elementos de esa clave
@@ -447,13 +447,13 @@ class MemoryTable(object):
     
     def remove_index(self, index_name):
         if index_name not in self.index_list:
-            raise Exception('MemoryTable.remove_index','Index [' + index_name + '] not exists.' )
+            raise Exception('Dataset.remove_index','Index [' + index_name + '] not exists.' )
         del(self.index_list[index_name])
         return
     
     def _remove_index(self, index_name):
         if index_name[0] == '_':
-            raise Exception('MemoryTable.remove_index','Index name [' + index_name + '] can not start with underscore (reserved).')
+            raise Exception('Dataset.remove_index','Index name [' + index_name + '] can not start with underscore (reserved).')
         self.remove_index(index_name)
         return
     
@@ -463,7 +463,7 @@ class MemoryTable(object):
         reconstruye el índice index_name en caso de corrupción
         '''
         if index_name[0] == '_':
-            raise Exception('MemoryTable.reindex_by','Index name [' + index_name + '] can not start with underscore (reserved).')
+            raise Exception('Dataset.reindex_by','Index name [' + index_name + '] can not start with underscore (reserved).')
         return self._reindex_by(index_name)
     
     
@@ -472,7 +472,7 @@ class MemoryTable(object):
         reconstruye el índice index_name en caso de corrupción
         '''
         if index_name not in self.index_list:
-            raise Exception('MemoryTable.reindex_by','Index [' + index_name + '] not exists.' ) 
+            raise Exception('Dataset.reindex_by','Index [' + index_name + '] not exists.' ) 
         
         # cogemos la expresión
         code = self.index_list[index_name]['exp']
@@ -501,7 +501,7 @@ class MemoryTable(object):
     
 
 if __name__ == '__main__':
-    t = MemoryTable()
+    t = Dataset()
         
     f = fact.Fact("uno")
     t.add_element(f)

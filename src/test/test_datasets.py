@@ -4,15 +4,15 @@ Created on 08/08/2013
 @author: jcpenuela
 '''
 import unittest
-from MemoryTable import MemoryTable
-import Fact as fact
+import fact as Fact
+from dataset import Dataset
 
 
 class MemoryListTest(unittest.TestCase):
 
 
     def setUp(self):
-        self.tabla = MemoryTable()
+        self.tabla = Dataset()
 
 
     def tearDown(self):
@@ -22,27 +22,27 @@ class MemoryListTest(unittest.TestCase):
     def testUpdates(self):
         t = self.tabla
         
-        f = fact.Fact("uno")
+        f = Fact.Fact("uno")
         t.add_element(f)
-        f = fact.Fact("dos")
+        f = Fact.Fact("dos")
         t.add_element(f)
-        f = fact.Fact("tres")
+        f = Fact.Fact("tres")
         t.add_element(f)
         
         f.set_fact("DOS")
         
         t.update_element(f, 2, False)
-        self.assertEqual(t[2].fact, "DOS" )
+        self.assertEqual(t[2].Fact, "DOS" )
 
 
     def testIndex(self):
         t = self.tabla
         
-        f = fact.Fact("uno")
+        f = Fact.Fact("uno")
         t.add_element(f)
-        f = fact.Fact("dos")
+        f = Fact.Fact("dos")
         t.add_element(f)
-        f = fact.Fact("tres")
+        f = Fact.Fact("tres")
         t.add_element(f)
 
         t._index_by('hecho', f.content)
@@ -53,29 +53,29 @@ class MemoryListTest(unittest.TestCase):
     def testBorrados(self):
         t = self.tabla
         
-        f = fact.Fact("uno")
+        f = Fact.Fact("uno")
         t.add_element(f)
-        f = fact.Fact("dos")
+        f = Fact.Fact("dos")
         t.add_element(f)
-        f = fact.Fact("tres")
+        f = Fact.Fact("tres")
         t.add_element(f)
         
         self.assertEqual(t.count(), 3)
-        self.assertEqual(t[2].fact, "dos")
+        self.assertEqual(t[2].Fact, "dos")
         
         t.delete_element(2)
         self.assertEqual(t[2], None)
         
-        f = fact.Fact("cuatro")
+        f = Fact.Fact("cuatro")
         t.add_element(f)
-        self.assertEqual(t[4].fact, "cuatro")
+        self.assertEqual(t[4].Fact, "cuatro")
         
         self.assertEqual(t.count(), 3)
         
         
 
     def testReferencias(self):
-        f = fact.Fact("original")
+        f = Fact.Fact("original")
         self.tabla.add_element(f)
         
         # g es deepcopy del elemento de la tabla
