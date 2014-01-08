@@ -19,20 +19,38 @@ import fact
 class Dataset(object):
     
     def __init__(self):
-        self.elements = dict()     # objetos en memoria { object_id : object }
-        self.next_element_id = 1    # siguiente id libre 
-        self.index_list = dict() # índices { index_name : DatasetIndex object }
+        self.elements = dict()     # nodos en memoria 
+        self.next_element_id = 1       # siguiente id libre
+        self.index_list = dict() # lista vacía de índices creados para
+        '''
+             { index_name : 
+                           { 
+                                'exp' : expresion,
+                                'original_exp': expresion original,
+                                'keys' :
+                                    {
+                                        clave1 : [],
+                                        clave2 : [],
+                                        ...
+                                        claven : []
+                                    } 
+                            } 
+        '''
         self._internal_indexes()
 
     def __getitem__(self, key):
         '''
+        
         Devuelve un nodo por su clave
+        
         '''
         return self.get_element(key,False)
 
     def __delitem__(self, key):
         '''
+        
         Borra un nodo interno por su clave
+        
         '''
         return self.remove_element(key)
            

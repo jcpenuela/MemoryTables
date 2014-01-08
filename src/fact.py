@@ -17,7 +17,7 @@ class Fact(object):
         self.fact_hk = hashlib.md5(f.encode('utf-8')).hexdigest()
     
     def content(self):
-        return self.Fact 
+        return self.Fact + "LL" 
 
 if __name__ == '__main__':
     f = Fact("A")
