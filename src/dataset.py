@@ -10,6 +10,7 @@ Created on 08/08/2013
 # obj.__eq__() => llamada cuando objeto1 == objeto2
 
 import copy
+import types
 import pickle
 # import types
 # import MemoryListIndex as ix
@@ -24,7 +25,7 @@ class Dataset(object):
         self.nodes = dict()     # objetos en memoria { object_id : object }
         self.indexes = dict() # índices { index_name : DatasetIndex object }
         # Crea los índices internos
-        i = index.DatasetIndex('_hash', self.objects_list, 'hash')
+        i = index.DatasetIndex('_hash', self.nodes, 'hash')
         self.indexes['_hash']=i
 
     def __getitem__(self, key):
@@ -74,26 +75,26 @@ class Dataset(object):
             self.next_element_id = 1       # next free id out of free list
         
 
-
-    def add(self, new_node, referenced = False):
+    def insert(self, new_node, referenced = False):
         '''
-        - Añade un elemento a la tabla. Devuelve el id de la tabla.
+        - Añade un elemento a la tabla. Devuelve el id insertado 
+          para el nodo
         - Verifica si el elemento existe ya, si es así no inserta, sino que
-        localiza el id y lo devuelve.
+          localiza el id y lo devuelve.
         - referenced = True implica que no se almacena una copia del elemento,
-        sino una referencia al elemento pasado (en el caso de que
-        sea un elemento referenciado, objeto, lista, etc...)       
+          sino una referencia al elemento pasado (en el caso de que
+          sea un elemento referenciado, objeto, lista, etc...)       
         '''
         
         h = hash(new_node)
         
         # Comprueba si ya existe el nodo
-        if h in self.index_list['_hash']['keys']:
+        if h in self.indexes['_hash'].keys:
             # Localizar un id y mandarlo de vuelta
-            nodes_id_list = self.index_list['_hash']['keys'][h]
+            nodes_id_list = self.indexes['_hash'].keys[h]
             for node_id in nodes_id_list:
                 # los nodos deben implementar __eq__
-                if new_node == nodes[node_id]:
+                if new_node == self.nodes[node_id]:
                     return node_id
         
         # No hay nodo igual al que se quiere insertar, 
@@ -103,13 +104,13 @@ class Dataset(object):
             n = copy.deepcopy(new_node)
             self.nodes[new_id] = n
         else:
-            self.nodes[new_id] = new_element
+            self.nodes[new_id] = new_node
     
         # indexar elemento recien insertado
         self._index_nodes({new_id:new_node})
         
         return new_id
-
+    
     
     def _index_nodes(self, nodes):
         '''
@@ -119,19 +120,19 @@ class Dataset(object):
             self.indexes[index_name].index(nodes)
     
 
-    def index_by(self, index_name, index_expression):
+    def index(self, index_name, index_expression):
         '''
         Crea un índice llamado 'index_name' por una 'index_expression'
         No admite el uso de índices reservados '_<nombre_indice>'
         Devuelve una tupla (número de claves, número de nodos indexados)
         '''
-        if index_name[0] = '_':
+        if index_name[0] == '_':
             # se levanta excepción
-            raise Exception('Dataset.index_by()','Reserved index name used')
+            raise Exception('Dataset.index()','Reserved index name used')
         
         if index_name in self.indexes:
             # el nombre ya existe
-            raise Exception('Dataset.index_by()','Index name is in use')
+            raise Exception('Dataset.index()','Index name is in use')
             
         new_index = index.DatasetIndex(index_name, self.nodes, index_expression)
         self.indexes[index_name] = new_index
@@ -140,7 +141,33 @@ class Dataset(object):
         return new_index.nkeys, new_index.nitems
         
         
-    
+    def select(self, select_expression):
+        '''
+        selecciona nodos del dataset.
+        expresión de query en json, similar a mongodb
+        http://docs.mongodb.org/manual/reference/operator/query/
+        '''
+        if isinstance(select_expression, dict) == False:
+            raise Exception('Dataset.select()','Query must be a dict instance')
+        
+        print()
+        print('SELECT EXPRESSION: ', select_expression)
+        nodes = dict()
+        # t.select({'fact':{'$in':['uno','dos']}})
+        print('Hay ', len(select_expression), 'elementos en la expresión de consulta')
+        for lvalue, rvalue in select_expression.items():
+            print('LVALUE:', lvalue, 'RVALUE:', rvalue)
+            if lvalue[0] in ('$','_','#'):
+                print('es operador, dato reservado o refiere a índice') 
+            else:
+                print('es comparación directa')
+        
+        return nodes
+        
+        
+        
+        
+        
     
     def get_element(self, node_id, referenced=False):
         '''
@@ -204,42 +231,37 @@ class Dataset(object):
         '''
         return len(self.nodes)
 
-
-    
-    
-        
-        
             
     def dump_data(self):
-        print('Lista de elementos: ', len(self.elements))
+        print('Lista de elementos: ', len(self.nodes))
         print('Índices: ')
-        for index_name in self.index_list:
+        for index_name in self.indexes:
             print('   - ' + index_name + ': ' + \
-                  self.index_list[index_name]['exp'] + ' | ' + \
-                  self.index_list[index_name]['original_exp'])
-            for key in self.index_list[index_name]['keys']:
-                print('         [' + str(key) + ']:' + str(self.index_list[index_name]['keys'][key]))
-        print('Elementos: ')
-        for n in self.elements:
-            print('id:', n, ' cont:', self.elements[n])
+                  self.indexes[index_name].index_expression + ' | ' + \
+                  self.indexes[index_name].expression_type)
+            for key in self.indexes[index_name].keys:
+                print('         [' + str(key) + ']:' + str(self.indexes[index_name].keys[key]))
+        print('nodos: ')
+        for n in self.nodes:
+            print('id:', n, ' cont:', self.nodes[n])
             
     
 
 if __name__ == '__main__':
     t = Dataset()
-        
     f = fact.Fact("uno")
-    t.add(f)
+    t.insert(f)
     f = fact.Fact("dos")
-    t.add(f)
+    t.insert(f)
     f = fact.Fact("tres")
-    t.add(f)
+    t.insert(f)
 
-    t.index_by('hecho', '.content()')
-
-    print(t.select_elements_order_by_ix('_insert', referenced=True))
-    print(t.select_elements_order_by_ix('_content', referenced=True))
-    print(t.select_elements_order_by_ix('hecho', referenced=True))
+    t.index('hecho', 'content()')
 
     t.dump_data()
+    
+    t.select({'fact':{'$in':['uno','dos']}})
+    t.select({'#indice':{'$eq':['uno','dos']}})
+    t.select({'_indice':1, '#indice':'valor'})
+    
         
