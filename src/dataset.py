@@ -14,15 +14,18 @@ import pickle
 # import types
 # import MemoryListIndex as ix
 import fact
+import index
 
 
 class Dataset(object):
     
     def __init__(self):
-        self.elements = dict()     # objetos en memoria { object_id : object }
         self.next_element_id = 1    # siguiente id libre 
-        self.index_list = dict() # índices { index_name : DatasetIndex object }
-        self._internal_indexes()
+        self.nodes = dict()     # objetos en memoria { object_id : object }
+        self.indexes = dict() # índices { index_name : DatasetIndex object }
+        # Crea los índices internos
+        i = index.DatasetIndex('_hash', self.objects_list, 'hash')
+        self.indexes['_hash']=i
 
     def __getitem__(self, key):
         '''
@@ -37,78 +40,108 @@ class Dataset(object):
         return self.remove_element(key)
            
     def __iter__(self):
-        '''
-        
+        '''        
         Devuelve un iterador con los nodos del dataset
-        
         '''
-        return iter(self.elements)
-
-
-
-    def _internal_indexes(self):
-        '''
-        
-        Crea los dos índices internos _insert y _content
-        
-        '''
-        self._index_by('_insert', '_insert')
-        self._index_by('_content', '_content')
-        self._index_by('_hash', '_hash')
+        return iter(self.nodes)
 
     def _get_next_element_id(self):
         '''
-        OK
-        Obtiene el siguente id
+        Obtiene el siguente id interno de nodo
         '''
         new_id = self.next_element_id
         self.next_element_id += 1
         return new_id
 
-
-
-    def truncate(self):
+      
+    def truncate(self, drop_indexes = False, reset_ids = True):
         '''
-        OK
-        Borra el contenido completo de la red
+        Borra el contenido completo del dataset
+        drop_indexes (deafult False). Si True -> elmina los índices
+        reset_ids (default True). Si True -> reinicia los ids, comienza por 1 otra vez
         '''
-        self.elements = dict() 
-        self.next_element_id = 1       # next free id out of free list
-        self.index_list = dict()
-        self._internal_indexes()
+        self.nodes = dict()
+        
+        if drop_indexes:
+            self.indexes = dict()
+            i = index.DatasetIndex('_hash', self.objects_list, 'hash')
+            self.indexes['_hash']=i
+        else:
+            for inx in self.indexes:
+                inx.truncate()
+                
+        if reset_ids:
+            self.next_element_id = 1       # next free id out of free list
+        
 
 
-
-
-    def add_element(self, new_element, referenced=False):
+    def add(self, new_node, referenced = False):
         '''
-        OK
-        Añade un elemento a la tabla. Devuelve el id de la tabla.
-        referenced = True implica que no se almacena una copia del elemento,
+        - Añade un elemento a la tabla. Devuelve el id de la tabla.
+        - Verifica si el elemento existe ya, si es así no inserta, sino que
+        localiza el id y lo devuelve.
+        - referenced = True implica que no se almacena una copia del elemento,
         sino una referencia al elemento pasado (en el caso de que
-        sea un elemento referenciado, objeto, lista, etc...)
-        
-        Verifica si el elemento existe ya, si es así no inserta, sino que
-        localiza el id y lo devuelve
+        sea un elemento referenciado, objeto, lista, etc...)       
         '''
         
-        h = hash(new_element)
-        if h in self.index_list['_hash']['keys']:
-            return 0
+        h = hash(new_node)
         
+        # Comprueba si ya existe el nodo
+        if h in self.index_list['_hash']['keys']:
+            # Localizar un id y mandarlo de vuelta
+            nodes_id_list = self.index_list['_hash']['keys'][h]
+            for node_id in nodes_id_list:
+                # los nodos deben implementar __eq__
+                if new_node == nodes[node_id]:
+                    return node_id
+        
+        # No hay nodo igual al que se quiere insertar, 
+        # aunque pueda tener el mismo hash, aparentemente es distinto
         new_id = self._get_next_element_id()
         if not referenced:
-            n = copy.deepcopy(new_element)
-            self.elements[new_id] = n
+            n = copy.deepcopy(new_node)
+            self.nodes[new_id] = n
         else:
-            self.elements[new_id] = new_element
+            self.nodes[new_id] = new_element
     
-        # indexar elemento
-        self.index_element(new_id)
+        # indexar elemento recien insertado
+        self._index_nodes({new_id:new_node})
         
         return new_id
 
+    
+    def _index_nodes(self, nodes):
+        '''
+        agrega los nodos 'nodes' a todos los índices 
+        '''        
+        for index_name, index in self.indexes.items():
+            self.indexes[index_name].index(nodes)
+    
 
+    def index_by(self, index_name, index_expression):
+        '''
+        Crea un índice llamado 'index_name' por una 'index_expression'
+        No admite el uso de índices reservados '_<nombre_indice>'
+        Devuelve una tupla (número de claves, número de nodos indexados)
+        '''
+        if index_name[0] = '_':
+            # se levanta excepción
+            raise Exception('Dataset.index_by()','Reserved index name used')
+        
+        if index_name in self.indexes:
+            # el nombre ya existe
+            raise Exception('Dataset.index_by()','Index name is in use')
+            
+        new_index = index.DatasetIndex(index_name, self.nodes, index_expression)
+        self.indexes[index_name] = new_index
+        
+        # retornamos el número de claves y de nodos del nuevo índice
+        return new_index.nkeys, new_index.nitems
+        
+        
+    
+    
     def get_element(self, node_id, referenced=False):
         '''
         OK
@@ -161,347 +194,19 @@ class Dataset(object):
             self.elements[id_element] = new_element
         
         # indexo el nuevo elemento
-        self.index_element(id_element)
-        
-        return id
+        self.index_element(id_element)    
+        return id_element
     
-    
-
 
     def count(self):
         '''
-        OK
+        Devuelve el número de nodos
         '''
-        return len(self.elements)
+        return len(self.nodes)
 
 
     
     
-    def select_element_ids_order_by_ix(self, index_name, limit=0):
-        '''
-        devuelve todos los elementos de la tabla ordenados por un índice
-        el campo limit indica si quiere una cantidad concreta de elementos o la lista
-        completa de elementos
-        '''
-        elements = []
-        n = 0
-        if index_name not in self.index_list:
-            raise Exception('Dataset.get_element_by','Index [' + index_name + '] not exists.' )
-        
-        for element_ids_list in sorted(self.index_list[index_name]['keys']):
-            n+=1
-            if limit==0 or (limit>0 and n <= limit):  
-                elements = elements + element_ids_list
-            else:
-                break
-        
-        return elements
-
-
-    def select_elements_order_by_ix(self, index_name, limit=0, referenced=False):
-        '''
-        devuelve todos los elementos de la tabla ordenados por un índice
-        el campo limit indica si quiere una cantidad concreta de elementos o la lista
-        completa de elementos
-        '''
-        elements = []
-        n = 0
-        if index_name not in self.index_list:
-            raise Exception('Dataset.get_element_by','Index [' + index_name + '] not exists.' )
-        
-        print((self.index_list[index_name]['keys']))
-        for element_ids_list in sorted((self.index_list[index_name]['keys']).keys()):
-            if limit==0 or (limit>0 and n <= limit):
-                for element_id in self.index_list[index_name]['keys'][element_ids_list]:
-                    n+=1
-                    if limit==0 or (limit>0 and n <= limit):
-                        if referenced:
-                            elements.append(self.elements[element_id])
-                        else:
-                            e = copy.deepcopy(self.elements[element_id])
-                            elements.append(e)
-                    else:
-                        break
-            else:
-                break
-
-        return elements
-
-
-
-    def select_element_ids_where_ix_value(self, index_name, value, limit=0):
-        '''
-        Recupera una copia de la lista de ids de nodos cuyo value coincide con el pasado
-        None en caso contrario
-        '''
-        n = 0
-        
-        if index_name not in self.index_list:
-            raise Exception('Dataset.select_element_ids_where_value','Index [' + index_name + '] not exists.' )
-        
-        if value not in self.index_list[index_name]['keys']:
-            return None
-        if limit == 0:
-            return list(self.index_list[index_name]['keys'][value])
-        else:
-            element_ids_list = []
-            while n < limit:
-                element_ids_list.append(self.index_list[index_name]['keys'][value][n-1])
-                n+=1
-            return element_ids_list
-                
-        
-    
-    def select_elements_where_ix_value(self, index_name, value, limit=0, referenced=False):
-        '''
-        Recupera una copia de la lista de nodos cuya clave coincide con el pasado
-        None en caso contrario
-        '''
-        if index_name not in self.index_list:
-            raise Exception('Dataset.select_elements_where_value','Index [' + index_name + '] not exists.' )
-        
-        if value not in self.index_list[index_name]['keys']:
-            return None
-        
-        elements_list = list()
-        n = 0
-        for element_id in self.index_list[index_name]['keys'][value]:
-            n+=1
-            if limit==0 or (n <= limit):
-                if referenced:
-                    elements_list.append(self.elements[element_id])
-                else:
-                    e = copy.deepcopy(self.elements[element_id])
-                    elements_list.append(e)
-            else:
-                break
-        
-        return elements_list
-    
-    
-    
-    def index_by(self, index_name, expresion):
-        if index_name[0] == '_':
-            raise Exception('Dataset._index_by','Index name [' + index_name + '] can not start with underscore (reserved).')
-        return self._index_by(index_name, expresion)
-    
-         
-    def _index_by(self, index_name, expresion):
-        '''
-        Crea un índice. La clave del índice se genera con la "expresion"
-        
-        La función no puede esperar argumentos, ya que no se le van a pasar argumentos
-        a la hora de evaluarlo con "eval"
-        
-        "funcion(elemento)" -> En caso de ser elemento básico y no un objeto
-        "funcion(.campo1)" -> evalua como función
-        "funcion(.metodo1())" -> evalua como función 
-        ".metodo1()" ->
-        ".campo3" ->
-        "#expresion" -> (passthrough)
-        "lambda ..." ->
-        "_interno" -> Acciones internas reservadas, por ejemplo "_natural"
-        
-        Devuelve una tupla con dos elementos (número de claves y número de elementos)
-        '''
-        if index_name in self.index_list:
-            raise Exception('Dataset.index_by','Index [' + index_name + '] already exists.')
-        
-        
-        # t = type(function_name)
-        
-        indexed_elements = 0
-        indexed_keys = 0
-        # se llama a una expresión que está en el objeto
-        # ".metodo1()" ->
-        # ".campo3" ->
-        # prepara el código a evaluar
-        
-        if expresion[0] == '#':
-            # passthrough 
-            code = expresion[1:]
-            
-        elif expresion[0] == '_':
-            # expresión interna a la clase Dataset
-            if expresion == '_insert':
-                # orden de entrada
-                code = 'element_id'
-            elif expresion == '_content':
-                # hash del contenido del elemento
-                code = 'hash(str(self.elements[element_id]))'
-            else:
-                # caso no reconocido
-                code = ''
-                
-        elif expresion[0:6] == 'lambda ':
-            # lambda
-            code = expresion
-            
-        elif expresion[0] == '.':
-            # expresión interna al objeto
-            code = 'str(self.elements[element_id]' + expresion + ')'
-             
-        else:
-            # se llama a una expresión externa
-            # "funcion()" -> En caso de ser elemento básico y no un objeto,lleva al objeto como argumento
-            # "funcion(.campo1)" -> evalua como función
-            # "funcion(.metodo1())" -> evalua como función
-            fn = expresion[0:expresion.find('(')+1] # funcion
-            if expresion[expresion.find('(')+1] == ')': 
-                # lleva al propio objeto como argumento
-                code = fn + 'self.elements[element_id])'
-            else:
-                vr = expresion[expresion.find('(')+2:-1]
-                code = fn + 'self.elements[element_id].' + vr + ')'
-
-        # crea la entrada del índice en el conjunto  de índices y almacenamos las expresión
-        self.index_list[index_name] = dict()
-        self.index_list[index_name]['exp'] = code
-        self.index_list[index_name]['original_exp'] = expresion
-        self.index_list[index_name]['keys'] = dict()
-
-        # ejecuta el código obtenido de la expresión para los elementos existentes        
-        for element_id in self.elements:
-            # ejecuta el código para obtener la clave de índice
-            try:
-                # value = self.elements[element_id].function_name()
-                value = eval(code)
-                # value = function_name()
-                # DEBUG
-                # print(self.elements[element_id].content)
-            except NameError:
-                raise Exception('Dataset.index_by','Index [' + index_name + ']. Index expression [' + expresion + '] fails.' )
-            
-            # el valor retornado por la ejecución del código de generación de clave
-            # se inserta
-            if value in self.index_list[index_name]['keys']:
-                self.index_list[index_name]['keys'][value].append(element_id)
-            else:
-                self.index_list[index_name]['keys'][value] = [element_id]
-                indexed_keys += 1
-                
-            indexed_elements += 1
-        
-        
-        return (indexed_keys, indexed_elements)
-
-
-    def index_element(self, element_id):
-        '''
-        agrega a todos los índices (indexa) el elemento con indice "element_id" de "self.elements"
-        '''
-        
-        indexes_processed = 0
-        
-        for index_name in self.index_list:
-            
-            code = self.index_list[index_name]['exp']
-        
-            try:
-                #DEBUG
-                # print(code)
-                value = eval(code)
-                #DEBUG
-                # print(value)
-            except NameError:
-                raise Exception('Dataset.index_element','Index [' + index_name + ']. Index code [' + code + '] fails.' )
-            
-            # el valor retornado por la ejecución del código de generación de clave
-            # se inserta
-            if value in self.index_list[index_name]['keys']:
-                self.index_list[index_name]['keys'][value].append(element_id)
-            else:
-                self.index_list[index_name]['keys'][value] = [element_id]
-            
-            indexes_processed += 1
-            
-        return indexes_processed 
-    
-    
-    def unindex_element(self, element_id):
-        '''
-        elimina las entradas del índice correspondientes al elemento
-        '''
-        indexes_processed = 0
-        
-        for index_name in self.index_list:
-            
-            code = self.index_list[index_name]['exp']
-        
-            try:
-                value = eval(code)
-                # DEBUG
-                # print(value)
-            except NameError:
-                raise Exception('Dataset.unindex_element','Index [' + index_name + ']. Index code [' + code + '] fails.' )
-            
-            # el valor retornado por la ejecución del código de generación de clave
-            # se borra de la lista de elementos de esa clave
-            if value in self.index_list[index_name]['keys']:
-                self.index_list[index_name]['keys'][value].remove(element_id)
-            
-            indexes_processed += 1
-            
-        return indexes_processed
-            
-            
-    
-    def reindex_element(self, element_id):
-        '''
-        actualiza todos los índices del elemento con indice "element_id" de "self.elements"
-        Este procedimiento implica una búsqueda en profundidad del elemento en los índices
-        para eliminarlo
-        '''
-        
-        # borramos todas las entradas de element_id en los índices existentes
-        for index_name in self.index_list:
-            for key_value in self.index_list[index_name]['keys']:
-                while element_id in self.index_list[index_name]['keys'][key_value]:
-                    self.index_list[index_name]['keys'][key_value].remove(element_id)
-        
-        # indexamos de nuevo el elemento en base a su expresión
-        return self.index_element(element_id)
-        
-
-
-    
-    def remove_index(self, index_name):
-        if index_name not in self.index_list:
-            raise Exception('Dataset.remove_index','Index [' + index_name + '] not exists.' )
-        del(self.index_list[index_name])
-        return
-    
-    def _remove_index(self, index_name):
-        if index_name[0] == '_':
-            raise Exception('Dataset.remove_index','Index name [' + index_name + '] can not start with underscore (reserved).')
-        self.remove_index(index_name)
-        return
-    
-    
-    def reindex_by(self, index_name):
-        '''
-        reconstruye el índice index_name en caso de corrupción
-        '''
-        if index_name[0] == '_':
-            raise Exception('Dataset.reindex_by','Index name [' + index_name + '] can not start with underscore (reserved).')
-        return self._reindex_by(index_name)
-    
-    
-    def _reindex_by(self, index_name):
-        '''
-        reconstruye el índice index_name en caso de corrupción
-        '''
-        if index_name not in self.index_list:
-            raise Exception('Dataset.reindex_by','Index [' + index_name + '] not exists.' ) 
-        
-        # cogemos la expresión
-        code = self.index_list[index_name]['exp']
-        # borramos la entrada del índice
-        self.remove_index(index_name)
-        # indexamos con un passthrough de la expresión
-        self._index_by(index_name, '#'+code)
-        
-        return
         
         
             
@@ -524,11 +229,11 @@ if __name__ == '__main__':
     t = Dataset()
         
     f = fact.Fact("uno")
-    t.add_element(f)
+    t.add(f)
     f = fact.Fact("dos")
-    t.add_element(f)
+    t.add(f)
     f = fact.Fact("tres")
-    t.add_element(f)
+    t.add(f)
 
     t.index_by('hecho', '.content()')
 

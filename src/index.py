@@ -161,3 +161,11 @@ class DatasetIndex(object):
             nitems += len(self.remove_key(k))
             
         return (nkeys, nitems)
+    
+    def truncate(self):
+        '''
+        Elimina todos los elementos del índice (lo deja vacío)
+        '''
+        self.keys = dict()
+        self.nkeys = 0
+        self.nitems = 0
