@@ -4,111 +4,56 @@ Created on 08/08/2013
 @author: jcpenuela
 '''
 import unittest
-import fact as Fact
-from dataset import Dataset
+import fact
+import dataset
 
 
 class MemoryListTest(unittest.TestCase):
 
 
     def setUp(self):
-        self.tabla = Dataset()
-
+        print('setUp.....')
+        self.tabla = dataset.Dataset()
+        f = fact.Fact("uno") # 420534919696307790
+        # print('hash f:',hash(f))
+        self.tabla.insert(f)
+        f2 = fact.Fact("dos") # 1877651724996747602
+        # print('hash f:',hash(f2))
+        self.tabla.insert(f2)
+        f3 = fact.Fact("uno") # 420534919696307790
+        # print('hash f:',hash(f3))
+        self.tabla.insert(f3)
+        # self.tabla.dump_data()               
 
     def tearDown(self):
         pass
 
 
-    def testUpdates(self):
+    def testInsert(self):
+        print('testInsert.....')
+        self.assertEqual(self.tabla.count(), 3)
+        
+        
+    def testSelect(self):
+        print('testSelect.....')
         t = self.tabla
-        
-        f = Fact.Fact("uno")
-        t.add_element(f)
-        f = Fact.Fact("dos")
-        t.add_element(f)
-        f = Fact.Fact("tres")
-        t.add_element(f)
-        
-        f.set_fact("DOS")
-        
-        t.update_element(f, 2, False)
-        self.assertEqual(t[2].Fact, "DOS" )
-
-
-    def testIndex(self):
-        t = self.tabla
-        
-        f = Fact.Fact("uno")
-        t.add_element(f)
-        f = Fact.Fact("dos")
-        t.add_element(f)
-        f = Fact.Fact("tres")
-        t.add_element(f)
-
-        t._index_by('hecho', f.content)
+        seleccionados = t.select({'#':1})
+        self.assertEqual(list(seleccionados.keys()), [1])
+        seleccionados = t.select({'#':[1,3]})
+        self.assertEqual(list(seleccionados.keys()), [1,3]) 
+        seleccionados = t.select({'#':9})
+        self.assertEqual(list(seleccionados.keys()), [])
+        seleccionados = t.select({'#':[4,9]})
+        self.assertEqual(list(seleccionados.keys()), [])
+        seleccionados =  t.select({'#':[1,9]})
+        self.assertEqual(list(seleccionados.keys()), [1])
+        seleccionados = t.select({'@_hash':1877651724996747602})
+        self.assertEqual(list(seleccionados.keys()), [2])
+        seleccionados = t.select({'hecho':'hecho.Fact == "uno"'})
+        self.assertEqual(list(seleccionados.keys()), [1,3])
  
-
-
-
-    def testBorrados(self):
-        t = self.tabla
-        
-        f = Fact.Fact("uno")
-        t.add_element(f)
-        f = Fact.Fact("dos")
-        t.add_element(f)
-        f = Fact.Fact("tres")
-        t.add_element(f)
-        
-        self.assertEqual(t.count(), 3)
-        self.assertEqual(t[2].Fact, "dos")
-        
-        t.delete_element(2)
-        self.assertEqual(t[2], None)
-        
-        f = Fact.Fact("cuatro")
-        t.add_element(f)
-        self.assertEqual(t[4].Fact, "cuatro")
-        
-        self.assertEqual(t.count(), 3)
-        
-        
-
-    def testReferencias(self):
-        f = Fact.Fact("original")
-        self.tabla.add_element(f)
-        
-        # g es deepcopy del elemento de la tabla
-        g = self.tabla.get_element(1)
-        self.assertEqual(g.content(), "original")
-        
-        # cambiamos el objeto original
-        f.set_fact("cambiado")
-        self.assertEqual(f.content(), "cambiado")
-        self.assertEqual(g.content(), "original")
-        g.set_fact("nuevo G")
-        self.assertEqual(f.content(), "cambiado")
-        self.assertEqual(g.content(), "nuevo G")
-         
-        g2 = self.tabla.get_element(1)
-        self.assertEqual(g2.content(), "original")
-        self.assertEqual(f.content(), "cambiado")
-        self.assertEqual(g.content(), "nuevo G")
-        
-        g3 = self.tabla.get_element(1,True)
-        g3.set_fact("Cambiado por referencia")
-        self.assertEqual(g2.content(), "original")
-        self.assertEqual(f.content(), "cambiado")
-        self.assertEqual(g.content(), "nuevo G")
-        self.assertEqual(g3.content(), "Cambiado por referencia")
-
-        g4 = self.tabla[1]
-        self.assertEqual(g2.content(), "original")
-        self.assertEqual(f.content(), "cambiado")
-        self.assertEqual(g.content(), "nuevo G")
-        self.assertEqual(g3.content(), "Cambiado por referencia")
-        self.assertEqual(g4.content(), "Cambiado por referencia")
-
+ 
+ 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

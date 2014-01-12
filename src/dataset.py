@@ -10,12 +10,12 @@ Created on 08/08/2013
 # obj.__eq__() => llamada cuando objeto1 == objeto2
 
 import copy
-import types
 import pickle
 # import types
 # import MemoryListIndex as ix
 import fact
 import index
+
 
 
 class Dataset(object):
@@ -140,52 +140,95 @@ class Dataset(object):
         # retornamos el número de claves y de nodos del nuevo índice
         return new_index.nkeys, new_index.nitems
         
-        
+    
+    # TODO: el eval es peligroso si se pasa algo que no sea una lista 
     def select(self, select_expression):
         '''
-        selecciona nodos del dataset.
-        expresión de query en json, similar a mongodb
-        http://docs.mongodb.org/manual/reference/operator/query/
+        selecciona nodos del dataset. Devuelve un diccionario con los nodos
+        en formato {id:nodo, id:nodo,..., id:nodo}
+        expresión de query un diccionario
+        {'r':'expresión python búsqueda'}
+        
+        { "persona": "persona.ciudad in ('Sevilla','Huelva') and persona.edad >= 30" }
+        { "@indice": "['andrés','luís']" }
+        { "#id" : "[123,34,55}" }
+        
         '''
         if isinstance(select_expression, dict) == False:
-            raise Exception('Dataset.select()','Query must be a dict instance')
+            raise Exception('Dataset.select()','Query must be a dictionary')
         
-        print()
-        print('SELECT EXPRESSION: ', select_expression)
-        nodes = dict()
-        # t.select({'fact':{'$in':['uno','dos']}})
-        print('Hay ', len(select_expression), 'elementos en la expresión de consulta')
-        for lvalue, rvalue in select_expression.items():
-            print('LVALUE:', lvalue, 'RVALUE:', rvalue)
-            if lvalue[0] in ('$','_','#'):
-                print('es operador, dato reservado o refiere a índice') 
+        
+        # La búsqueda puede ser:
+        #    - Por id : #
+        #    - Por índice : @
+        #    - Por expresión a aplicar a cada nodo: $ / campo 
+        search_for = ''
+        
+        lvalue = list(select_expression.keys())[0]
+        rvalue = list(select_expression.values())[0]
+        
+        nodes_selected = dict()
+        
+        if lvalue[0] == '#':
+            # hay búsqueda por ids. Da lo mismo el resto...
+            # devolvemos todos los que
+            if isinstance(rvalue,str):
+                nodes_ids = eval(rvalue)
             else:
-                print('es comparación directa')
+                nodes_ids = rvalue
+                
+            if isinstance(nodes_ids,int):
+                nodes_ids = [nodes_ids]
+                
+            if (isinstance(nodes_ids,list) or isinstance(nodes_ids,set) or isinstance(nodes_ids,tuple)) == False:   
+                raise Exception('Dataset.select()','RVALUE is not in list or int format')
         
-        return nodes
+            for node_id in nodes_ids:
+                try:
+                    nodes_selected[node_id] = self.nodes[node_id]
+                except KeyError:
+                    pass
+                except:
+                    raise
         
+            return nodes_selected
         
+        if lvalue[0] == '@':
+            # la búsqueda es por índices
+            # devolvemos todos los que estén en el index
+            index_name = lvalue[1:]
+            if isinstance(rvalue,str):
+                index_values = eval(rvalue)
+            else:
+                index_values = rvalue
+                
+            if index_name not in self.indexes:
+                raise Exception('Dataset.select()','Index name <' + index_name  + '> do not exist')
+            
+            if (isinstance(index_values,list) or isinstance(index_values,set) or isinstance(index_values,tuple)) == False:   
+                index_values = [index_values]
+                
+            for index in index_values:
+                try:
+                    for node_id in self.indexes[index_name][index]:
+                        nodes_selected[node_id] = self.nodes[node_id]
+                except KeyError:
+                    pass
+                except:
+                    raise           
+            return nodes_selected
         
+        # Es por expresión
+        qfunction = eval("lambda " + lvalue + " : " + rvalue)
+        for node_id, node in self.nodes.items():
+            # aplicar búsque
+            if qfunction(node):
+                nodes_selected[node_id]=node
+                       
+        return nodes_selected
         
-        
-    
-    def get_element(self, node_id, referenced=False):
-        '''
-        OK
-        Recupera un elemento por el id
-        referenced = True implica que recupera una referencia al elemento
-        en lugar de una copia. Eso permite modificar el objeto que se recupera
-        directamente (si es referenciado)
-        '''
 
-        if node_id in self.elements:
-            if not referenced:
-                e = copy.deepcopy(self.elements[node_id])
-                return e
-            else:
-                return self.elements[node_id]
-        else:
-            return None
+
 
 
     def delete_element(self, element_id):
@@ -243,7 +286,7 @@ class Dataset(object):
                 print('         [' + str(key) + ']:' + str(self.indexes[index_name].keys[key]))
         print('nodos: ')
         for n in self.nodes:
-            print('id:', n, ' cont:', self.nodes[n])
+            print('id:', n, ' cont:', self.nodes[n], 'hash:', hash(self.nodes[n]))
             
     
 
