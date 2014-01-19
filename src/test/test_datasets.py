@@ -52,6 +52,9 @@ class MemoryListTest(unittest.TestCase):
         seleccionados = t.select({'hecho':'hecho.Fact == "uno"'})
         self.assertEqual(list(seleccionados.keys()), [1,3])
  
+    def testDelete(self):
+        print('testDelete.....')
+        t = self.tabla
  
  
 if __name__ == "__main__":

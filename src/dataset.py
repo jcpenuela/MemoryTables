@@ -228,6 +228,101 @@ class Dataset(object):
         return nodes_selected
         
 
+    def select2(self, select_expression):
+        '''
+        selecciona nodos del dataset. Devuelve un diccionario con los nodos
+        en formato {id:nodo, id:nodo,..., id:nodo}
+        expresión de query un diccionario
+        {'r':'expresión python búsqueda'}
+        
+        { "persona": "persona.ciudad in ('Sevilla','Huelva') and persona.edad >= 30" }
+        { "@indice": "['andrés','luís']" }
+        { "#id" : "[123,34,55}" }
+        
+        '''
+        if hasattr(select_expression, '__call__'):
+            # pasa una lambda para utilizarla
+            nodes_selected = dict()
+            for node_id, node in self.nodes.items():
+            # aplicar búsque
+                if select_expression(node):
+                    nodes_selected[node_id]=node                      
+            return nodes_selected
+
+        
+        if isinstance(select_expression, dict) == False:
+            raise Exception('Dataset.select2()','Query must be a function or formatted dictionary')
+        
+        
+        # La búsqueda puede ser:
+        #    - Por id : #
+        #    - Por índice : @
+        #    - Por expresión a aplicar a cada nodo: $ / campo 
+        search_for = ''
+        
+        lvalue = list(select_expression.keys())[0]
+        rvalue = list(select_expression.values())[0]
+        
+        nodes_selected = dict()
+        
+        if lvalue[0] == '#':
+            # hay búsqueda por ids. Da lo mismo el resto...
+            # devolvemos todos los que
+            if isinstance(rvalue,str):
+                nodes_ids = eval(rvalue)
+            else:
+                nodes_ids = rvalue
+                
+            if isinstance(nodes_ids,int):
+                nodes_ids = [nodes_ids]
+                
+            if (isinstance(nodes_ids,list) or isinstance(nodes_ids,set) or isinstance(nodes_ids,tuple)) == False:   
+                raise Exception('Dataset.select()','RVALUE is not in list or int format')
+        
+            for node_id in nodes_ids:
+                try:
+                    nodes_selected[node_id] = self.nodes[node_id]
+                except KeyError:
+                    pass
+                except:
+                    raise
+        
+            return nodes_selected
+        
+        if lvalue[0] == '@':
+            # la búsqueda es por índices
+            # devolvemos todos los que estén en el index
+            index_name = lvalue[1:]
+            if isinstance(rvalue,str):
+                index_values = eval(rvalue)
+            else:
+                index_values = rvalue
+                
+            if index_name not in self.indexes:
+                raise Exception('Dataset.select()','Index name <' + index_name  + '> do not exist')
+            
+            if (isinstance(index_values,list) or isinstance(index_values,set) or isinstance(index_values,tuple)) == False:   
+                index_values = [index_values]
+                
+            for index in index_values:
+                try:
+                    for node_id in self.indexes[index_name][index]:
+                        nodes_selected[node_id] = self.nodes[node_id]
+                except KeyError:
+                    pass
+                except:
+                    raise           
+            return nodes_selected
+        
+        # Es por expresión
+        qfunction = eval("lambda " + lvalue + " : " + rvalue)
+        for node_id, node in self.nodes.items():
+            # aplicar búsque
+            if qfunction(node):
+                nodes_selected[node_id]=node
+                       
+        return nodes_selected
+        
 
 
 
