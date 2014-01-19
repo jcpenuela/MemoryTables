@@ -15,7 +15,7 @@ import pickle
 # import MemoryListIndex as ix
 import fact
 import index
-
+import dstools
 
 
 class Dataset(object):
@@ -240,6 +240,9 @@ class Dataset(object):
         { "#id" : "[123,34,55}" }
         
         '''
+        
+        # Si el parámetro es una función, la utilizamos para cada objeto del dataset
+        # Ls función debe devolver True o False para incluir o no el objeto
         if hasattr(select_expression, '__call__'):
             # pasa una lambda para utilizarla
             nodes_selected = dict()
@@ -249,7 +252,8 @@ class Dataset(object):
                     nodes_selected[node_id]=node                      
             return nodes_selected
 
-        
+        # Si no era el caso anterior, debe ser un diccionario con la
+        # expresión
         if isinstance(select_expression, dict) == False:
             raise Exception('Dataset.select2()','Query must be a function or formatted dictionary')
         
@@ -258,8 +262,6 @@ class Dataset(object):
         #    - Por id : #
         #    - Por índice : @
         #    - Por expresión a aplicar a cada nodo: $ / campo 
-        search_for = ''
-        
         lvalue = list(select_expression.keys())[0]
         rvalue = list(select_expression.values())[0]
         
@@ -315,11 +317,7 @@ class Dataset(object):
             return nodes_selected
         
         # Es por expresión
-        qfunction = eval("lambda " + lvalue + " : " + rvalue)
-        for node_id, node in self.nodes.items():
-            # aplicar búsque
-            if qfunction(node):
-                nodes_selected[node_id]=node
+        nodes_selected = dstools.select(select_expression, self.nodes)
                        
         return nodes_selected
         
