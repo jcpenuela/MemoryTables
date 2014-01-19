@@ -16,6 +16,7 @@ import pickle
 import fact
 import index
 import dstools
+import query
 
 
 class Dataset(object):
@@ -44,7 +45,9 @@ class Dataset(object):
         '''        
         Devuelve un iterador con los nodos del dataset
         '''
-        return iter(self.nodes)
+        for i,v in self.nodes.items():
+            yield i,v
+        # return iter(self.nodes)
 
     def _get_next_element_id(self):
         '''
@@ -240,6 +243,10 @@ class Dataset(object):
         { "#id" : "[123,34,55}" }
         
         '''
+        # TODO: la expressión de consulta puede venir también en un
+        # objeto de tipo query además de en una expresión
+        if isinstance(select_expression, query.Query):
+            select_expression = select_expression.get_query()
         
         # Si el parámetro es una función, la utilizamos para cada objeto del dataset
         # Ls función debe devolver True o False para incluir o no el objeto

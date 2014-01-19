@@ -90,10 +90,10 @@ def select(query, datos):
     '''
     query = normalizar(query)
     
-    nodes_selected = list()
+    nodes_selected = dict()
     for ds_id, ds_element in datos.items():
         if evalue(query, ds_element):
-            nodes_selected.append({ds_id:ds_element})
+            nodes_selected[ds_id] = ds_element
         
     return nodes_selected
 
