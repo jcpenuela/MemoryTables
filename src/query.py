@@ -25,7 +25,7 @@ class Query(object):
         else:
             self.expression = dict()
 
-       
+
     def add_and(self, condition):
         '''
         Añade una pareja al árbol
@@ -38,7 +38,8 @@ class Query(object):
         else:
             self.expression = dict({'$and' :[self.expression, dstools.normalizar(condition)]})
         return self.expression
- 
+
+    
     def add_or(self, condition):
         '''
         Añade una pareja al árbol

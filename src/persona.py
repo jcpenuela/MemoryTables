@@ -12,7 +12,7 @@ class Persona(object):
         self.peso = peso
         
     def __eq__(self, *args, **kwargs):
-        return args[0].key == self.key()
+        return args[0].key() == self.key()
     
     def key(self):    
         return str((self.nombre, self.ciudad, self.edad, self.peso)).encode()

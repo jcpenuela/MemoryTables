@@ -98,6 +98,26 @@ def select(query, datos):
     return nodes_selected
 
 
+def select_ids(query, datos):
+    # IMPORTANTE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+    # class Person(object):
+    #     def addattr(self,x,val):
+    #        self.__dict__[x]=val
+    # Método de añadir de forma dinámica una variable a un objeto
+    
+    '''
+    '''
+    query = normalizar(query)
+    
+    nodes_selected = list()
+    for ds_id, ds_element in datos.items():
+        if evalue(query, ds_element):
+            nodes_selected.append(ds_id)
+        
+    return nodes_selected
+
+
+
 def logical_operator_or(rval, ds_element):
     for i in rval:
         if evalue(i,ds_element):

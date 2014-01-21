@@ -33,13 +33,13 @@ class Dataset(object):
         '''
         Devuelve un nodo por su clave
         '''
-        return self.get_element(key,False)
+        return self.nodes[key]
 
     def __delitem__(self, key):
         '''
         Borra un nodo interno por su clave
         '''
-        return self.remove_element(key)
+        return self.delete({'#':key})
            
     def __iter__(self):
         '''        
@@ -78,7 +78,7 @@ class Dataset(object):
             self.next_element_id = 1       # next free id out of free list
         
 
-    def insert(self, new_node, referenced = False):
+    def insert(self, new_node, force = False, referenced = False):
         '''
         - Añade un elemento a la tabla. Devuelve el id insertado 
           para el nodo
@@ -86,19 +86,39 @@ class Dataset(object):
           localiza el id y lo devuelve.
         - referenced = True implica que no se almacena una copia del elemento,
           sino una referencia al elemento pasado (en el caso de que
-          sea un elemento referenciado, objeto, lista, etc...)       
+          sea un elemento referenciado, objeto, lista, etc...)     
+        - El parámetro force indica que, a pesar de que el objeto exista, se
+          insertará
+        - Se comprobará el tipo del objeto a insertar, ya que si se quiere
+          insertar objetos primitivos o tipos que no se puedan realizar
+          un hash, se creará un objeto envoltorio para ellos
         '''
         
+        # TODO:
+        # Se debe ?? comprobará el tipo del objeto a insertar, ya que si se quiere
+        #  insertar objetos primitivos o tipos que no se puedan realizar
+        #  un hash, se creará un objeto envoltorio para ellos
+        
+        # TODO: Se podría verificar si un objeto a insertar tiene o no implementado un método __hash__()
+        # como añadido, de forma que los que sean clases no primitivas, se controlen y se avise que no
+        # se tiene hash() implementado, por lo que no se puede localizar correctamente el dato
+        # Y, a ser posible, poner un wrapper que permita crear un hash por nuestra parte
+        # (objeto.__hash__.__class__.__name__ == 'method-wrapper') => NO lo tiene implementado
+        # (objeto.__hash__.__class__.__name__ == 'method') => SI lo tiene implementado
         h = hash(new_node)
         
-        # Comprueba si ya existe el nodo
-        if h in self.indexes['_hash'].keys:
-            # Localizar un id y mandarlo de vuelta
-            nodes_id_list = self.indexes['_hash'].keys[h]
-            for node_id in nodes_id_list:
-                # los nodos deben implementar __eq__
-                if new_node == self.nodes[node_id]:
-                    return node_id
+        # Vemos si se pide una inserción forzada, en cuyo caso no comprobamos nada,
+        # sino que pasamos directamente al proceso de inserción
+        if not force:
+            # Comprueba si ya existe el nodo
+            if h in self.indexes['_hash'].keys:
+                # Verificar que realmente es el mismo
+                # Localizar un id y mandarlo de vuelta
+                nodes_id_list = self.indexes['_hash'].keys[h]
+                for node_id in nodes_id_list:
+                    # los nodos deben implementar __eq__
+                    if new_node == self.nodes[node_id]:
+                        return node_id
         
         # No hay nodo igual al que se quiere insertar, 
         # aunque pueda tener el mismo hash, aparentemente es distinto
@@ -110,17 +130,10 @@ class Dataset(object):
             self.nodes[new_id] = new_node
     
         # indexar elemento recien insertado
-        self._index_nodes({new_id:new_node})
+        for index_name, index in self.indexes.items():
+            self.indexes[index_name].index({new_id:new_node})
         
         return new_id
-    
-    
-    def _index_nodes(self, nodes):
-        '''
-        agrega los nodos 'nodes' a todos los índices 
-        '''        
-        for index_name, index in self.indexes.items():
-            self.indexes[index_name].index(nodes)
     
 
     def index(self, index_name, index_expression):
@@ -144,94 +157,8 @@ class Dataset(object):
         return new_index.nkeys, new_index.nitems
         
     
-    # TODO: el eval es peligroso si se pasa algo que no sea una lista 
-    def select(self, select_expression):
-        '''
-        selecciona nodos del dataset. Devuelve un diccionario con los nodos
-        en formato {id:nodo, id:nodo,..., id:nodo}
-        expresión de query un diccionario
-        {'r':'expresión python búsqueda'}
-        
-        { "persona": "persona.ciudad in ('Sevilla','Huelva') and persona.edad >= 30" }
-        { "@indice": "['andrés','luís']" }
-        { "#id" : "[123,34,55}" }
-        
-        '''
-        if isinstance(select_expression, dict) == False:
-            raise Exception('Dataset.select()','Query must be a dictionary')
-        
-        
-        # La búsqueda puede ser:
-        #    - Por id : #
-        #    - Por índice : @
-        #    - Por expresión a aplicar a cada nodo: $ / campo 
-        search_for = ''
-        
-        lvalue = list(select_expression.keys())[0]
-        rvalue = list(select_expression.values())[0]
-        
-        nodes_selected = dict()
-        
-        if lvalue[0] == '#':
-            # hay búsqueda por ids. Da lo mismo el resto...
-            # devolvemos todos los que
-            if isinstance(rvalue,str):
-                nodes_ids = eval(rvalue)
-            else:
-                nodes_ids = rvalue
-                
-            if isinstance(nodes_ids,int):
-                nodes_ids = [nodes_ids]
-                
-            if (isinstance(nodes_ids,list) or isinstance(nodes_ids,set) or isinstance(nodes_ids,tuple)) == False:   
-                raise Exception('Dataset.select()','RVALUE is not in list or int format')
-        
-            for node_id in nodes_ids:
-                try:
-                    nodes_selected[node_id] = self.nodes[node_id]
-                except KeyError:
-                    pass
-                except:
-                    raise
-        
-            return nodes_selected
-        
-        if lvalue[0] == '@':
-            # la búsqueda es por índices
-            # devolvemos todos los que estén en el index
-            index_name = lvalue[1:]
-            if isinstance(rvalue,str):
-                index_values = eval(rvalue)
-            else:
-                index_values = rvalue
-                
-            if index_name not in self.indexes:
-                raise Exception('Dataset.select()','Index name <' + index_name  + '> do not exist')
-            
-            if (isinstance(index_values,list) or isinstance(index_values,set) or isinstance(index_values,tuple)) == False:   
-                index_values = [index_values]
-                
-            for index in index_values:
-                try:
-                    for node_id in self.indexes[index_name][index]:
-                        nodes_selected[node_id] = self.nodes[node_id]
-                except KeyError:
-                    pass
-                except:
-                    raise           
-            return nodes_selected
-        
-        # Es por expresión
-        qfunction = eval("lambda " + lvalue + " : " + rvalue)
-        for node_id, node in self.nodes.items():
-            # aplicar búsque
-            if qfunction(node):
-                nodes_selected[node_id]=node
-                       
-        return nodes_selected
-        
 
-    def select2(self, select_expression):
+    def select(self, select_expression = None):
         '''
         selecciona nodos del dataset. Devuelve un diccionario con los nodos
         en formato {id:nodo, id:nodo,..., id:nodo}
@@ -243,6 +170,29 @@ class Dataset(object):
         { "#id" : "[123,34,55}" }
         
         '''
+        ids_selected = self.select_ids(select_expression)
+        nodes_selected = dict()
+        for node_id in ids_selected:
+            nodes_selected[node_id]=self.nodes[node_id]
+        return nodes_selected
+
+
+    def select_ids(self, select_expression = None):
+        '''
+        selecciona ids del dataset. Devuelve una lista con los ids
+        de los nodos seleccionados según la expresión
+        expresión de query un diccionario
+        {'r':'expresión python búsqueda'}
+        
+        { "persona": "persona.ciudad in ('Sevilla','Huelva') and persona.edad >= 30" }
+        { "@indice": "['andrés','luís']" }
+        { "#id" : "[123,34,55}" }
+        
+        '''
+        
+        if select_expression == None:
+            return self.nodes.keys()
+        
         # TODO: la expressión de consulta puede venir también en un
         # objeto de tipo query además de en una expresión
         if isinstance(select_expression, query.Query):
@@ -252,17 +202,17 @@ class Dataset(object):
         # Ls función debe devolver True o False para incluir o no el objeto
         if hasattr(select_expression, '__call__'):
             # pasa una lambda para utilizarla
-            nodes_selected = dict()
+            nodes_selected = list()
             for node_id, node in self.nodes.items():
             # aplicar búsque
                 if select_expression(node):
-                    nodes_selected[node_id]=node                      
+                    nodes_selected.append(node_id)
             return nodes_selected
 
         # Si no era el caso anterior, debe ser un diccionario con la
         # expresión
         if isinstance(select_expression, dict) == False:
-            raise Exception('Dataset.select2()','Query must be a function or formatted dictionary')
+            raise Exception('Dataset.select()','Query must be a function or formatted dictionary')
         
         
         # La búsqueda puede ser:
@@ -272,11 +222,13 @@ class Dataset(object):
         lvalue = list(select_expression.keys())[0]
         rvalue = list(select_expression.values())[0]
         
-        nodes_selected = dict()
+        nodes_selected = list()
         
         if lvalue[0] == '#':
             # hay búsqueda por ids. Da lo mismo el resto...
             # devolvemos todos los que
+            # TODO: Revisar ésto,... el eval hay que sustituirlo por una selección de
+            # tipos para añadir en el caso de que sean listas o tuplas de ids
             if isinstance(rvalue,str):
                 nodes_ids = eval(rvalue)
             else:
@@ -288,20 +240,21 @@ class Dataset(object):
             if (isinstance(nodes_ids,list) or isinstance(nodes_ids,set) or isinstance(nodes_ids,tuple)) == False:   
                 raise Exception('Dataset.select()','RVALUE is not in list or int format')
         
+            # recorremos la lista de ids pedidos y si están como
+            # clave en la lista de nodos existentes, se añade a la
+            # lista de ids a devolver
             for node_id in nodes_ids:
-                try:
-                    nodes_selected[node_id] = self.nodes[node_id]
-                except KeyError:
-                    pass
-                except:
-                    raise
+                if node_id in self.nodes:
+                    nodes_selected.append(node_id)
         
             return nodes_selected
+        
         
         if lvalue[0] == '@':
             # la búsqueda es por índices
             # devolvemos todos los que estén en el index
             index_name = lvalue[1:]
+            # TODO: Sustituir el eval por una selección según el tipo (lista, tupla, set)
             if isinstance(rvalue,str):
                 index_values = eval(rvalue)
             else:
@@ -316,7 +269,7 @@ class Dataset(object):
             for index in index_values:
                 try:
                     for node_id in self.indexes[index_name][index]:
-                        nodes_selected[node_id] = self.nodes[node_id]
+                        nodes_selected.append(node_id)
                 except KeyError:
                     pass
                 except:
@@ -324,49 +277,55 @@ class Dataset(object):
             return nodes_selected
         
         # Es por expresión
-        nodes_selected = dstools.select(select_expression, self.nodes)
+        nodes_selected = dstools.select_ids(select_expression, self.nodes)
                        
         return nodes_selected
         
-
-
-
-    def delete_element(self, element_id):
-        '''
-        OK
-        Elimina el elemento de la red
-        '''
-        self.unindex_element(element_id)
-        if element_id in self.elements:
-            del(self.elements[element_id])
-            return True
-        else:
-            return False
-
-
-    def update_element(self, new_element, id_element, referenced=False):
-        '''
-        OK
-        Sustituye un nodo en la red. El nodo debe llevar su id alimentado para localizarse en la red.
-        Retorna el id del nodo
-        '''
-        if id_element not in self.elements:
-            raise Exception('Dataset.update_element','Element ID non existent in table')
         
-        # elimino las entradas de índices
-        self.unindex_element(id_element)
+
+    def delete(self, select_expression):
+        '''
+        Elimina el elemento del dataset. Retorn la lista de ids borrados
+        '''
+        nodes_to_delete = self.select_ids(select_expression)
+        return self.delete_ids(nodes_to_delete)
         
-        # Actualizar en la red
-        if not referenced:
-            n = copy.deepcopy(new_element)
-            self.elements[id_element] = n
-        else:
-            self.elements[id_element] = new_element
-        
-        # indexo el nuevo elemento
-        self.index_element(id_element)    
-        return id_element
+
+    def delete_ids(self, nodes_to_delete):
+        '''
+        Elimina el elemento del dataset. Retorn la lista de ids borrados
+        '''
+        if len(nodes_to_delete) > 0:
+            for ids in nodes_to_delete:
+                for inx_name,inx in self.indexes.items():
+                    inx.remove_id(ids)
+                del(self.nodes[ids])
+        return nodes_to_delete
     
+
+    def update(self, select_expression, new_node, force = False, referenced=False):
+        '''
+        Retorna el id nuevo. Lo que en realidad hace es borrar uno y sustituir uno.
+        No es un auténtico UPDATE. Para eso usaremos el método "modify"
+        El método "upsert" insertará aunque no haya localizado el nodo a cambiar
+        '''
+        # TODO: métodos self.modify(), self.upsert()
+        
+        nodes_to_update = self.select_ids(select_expression)
+        if len(nodes_to_update) == 0:
+            # no se localizan los nodos a sustituir
+            return []
+        
+        if len(nodes_to_update) == 1:
+            self.delete_ids(nodes_to_update)
+            new_node_id = self.insert(new_node, force, referenced)
+        else:
+            raise Exception('Dataset.update()','The select expression selects more than one node')
+            
+        return new_node_id
+        
+
+        
 
     def count(self):
         '''
@@ -391,20 +350,5 @@ class Dataset(object):
     
 
 if __name__ == '__main__':
-    t = Dataset()
-    f = fact.Fact("uno")
-    t.insert(f)
-    f = fact.Fact("dos")
-    t.insert(f)
-    f = fact.Fact("tres")
-    t.insert(f)
-
-    t.index('hecho', 'content()')
-
-    t.dump_data()
-    
-    t.select({'fact':{'$in':['uno','dos']}})
-    t.select({'#indice':{'$eq':['uno','dos']}})
-    t.select({'_indice':1, '#indice':'valor'})
-    
+    pass    
         
