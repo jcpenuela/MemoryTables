@@ -56,13 +56,13 @@ class MemoryListTest(unittest.TestCase):
         seleccionados =  t.select({'#':[1,9]})
         self.assertEqual(list(seleccionados.keys()), [1])
         
-        seleccionados = t.select({'@_hash':2027290602588602042})
+        seleccionados = t.select({'!_hash':2027290602588602042})
         self.assertEqual(list(seleccionados.keys()), [1])
         
-        seleccionados = t.select({'@_hash':[1026315136059584805,1009972526877977308]})
+        seleccionados = t.select({'!_hash':[1026315136059584805,1009972526877977308]})
         self.assertEqual(sorted(list(seleccionados.keys())), [5,7])
                 
-        seleccionados = t.select({'@ciudad':['Sevilla','Córdoba','Huelva']})
+        seleccionados = t.select({'!ciudad':['Sevilla','Córdoba','Huelva']})
         self.assertEqual(list(seleccionados.keys()), [1,2,3,4,5,6])
         
         seleccionados = t.select({'nombre':'S30'})
@@ -112,9 +112,9 @@ class MemoryListTest(unittest.TestCase):
         self.assertEqual(seleccionados, [4])
         seleccionados =  t.select_ids({'#':[1,9]})
         self.assertEqual(seleccionados, [1])
-        seleccionados = t.select_ids({'@_hash':2027290602588602042})
+        seleccionados = t.select_ids({'!_hash':2027290602588602042})
         self.assertEqual(seleccionados, [1])
-        seleccionados = t.select_ids({'@_hash':[1026315136059584805,1009972526877977308]})
+        seleccionados = t.select_ids({'!_hash':[1026315136059584805,1009972526877977308]})
         self.assertEqual(sorted(seleccionados), [5,7])
         seleccionados = t.select_ids({'nombre':'S30'})
         self.assertEqual(seleccionados, [2])
@@ -133,7 +133,7 @@ class MemoryListTest(unittest.TestCase):
         t = self.tabla
         t.delete({'#':1})
         self.assertEqual(sorted(list(t.nodes.keys())), [2,3,4,5,6,7,8])
-        t.delete({'@_hash':[1026315136059584805,1009972526877977308]})
+        t.delete({'!_hash':[1026315136059584805,1009972526877977308]})
         self.assertEqual(sorted(list(t.nodes.keys())), [2,3,4,6,8])
         t.delete({'nombre':'S30'})
         self.assertEqual(sorted(list(t.nodes.keys())), [3,4,6,8])
@@ -156,7 +156,17 @@ class MemoryListTest(unittest.TestCase):
         self.assertEqual(nuevo_id,9)
         anterior = t.select({'nombre':'S18'})
         self.assertEqual(anterior,{})
-        
+
+    
+    def testUpsert(self):
+        t = self.tabla
+        anterior = t.select_ids({'nombre':'S18'})
+        self.assertEqual(anterior,[1])
+        p = persona.Persona('J35', 'Jaén', 20, 70.5)
+        nuevo_id = t.update({'#':1},p)
+        self.assertEqual(nuevo_id,9)
+        anterior = t.select({'nombre':'S18'})
+        self.assertEqual(anterior,{})        
         
 
 

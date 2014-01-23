@@ -23,6 +23,17 @@ class Dstools(unittest.TestCase):
         q = dstools.normalizar(condition)
         self.assertEqual(q, {'edad':{'$gt':20}}, q)
         
+    def testNormalizar_dos(self):
+        '''
+        { '$or': [{'ciudad':'Sevilla'}, { {'$round(3)':'peso'} : 40 ] }
+        { '$or': [{'ciudad':'Sevilla'}, { {'$round(3)':'peso'} : {'$gte':40} ] }
+        { '$or': [{'ciudad':'Sevilla'}, { {'$round(3)':'peso'} : {'$gte':'@maximo'} ] }
+        '''
+        # print('testNormalizar')
+        condition = {'edad':{'$gt':20}}
+        q = dstools.normalizar(condition)
+        self.assertEqual(q, {'edad':{'$gt':20}}, q)
+        
         
         
 if __name__ == "__main__":

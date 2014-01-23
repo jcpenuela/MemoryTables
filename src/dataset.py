@@ -166,7 +166,7 @@ class Dataset(object):
         {'r':'expresión python búsqueda'}
         
         { "persona": "persona.ciudad in ('Sevilla','Huelva') and persona.edad >= 30" }
-        { "@indice": "['andrés','luís']" }
+        { "!indice": "['andrés','luís']" }
         { "#id" : "[123,34,55}" }
         
         '''
@@ -185,7 +185,7 @@ class Dataset(object):
         {'r':'expresión python búsqueda'}
         
         { "persona": "persona.ciudad in ('Sevilla','Huelva') and persona.edad >= 30" }
-        { "@indice": "['andrés','luís']" }
+        { "!indice": "['andrés','luís']" }
         { "#id" : "[123,34,55}" }
         
         '''
@@ -193,7 +193,7 @@ class Dataset(object):
         if select_expression == None:
             return self.nodes.keys()
         
-        # TODO: la expressión de consulta puede venir también en un
+        # la expressión de consulta puede venir también en un
         # objeto de tipo query además de en una expresión
         if isinstance(select_expression, query.Query):
             select_expression = select_expression.get_query()
@@ -217,7 +217,7 @@ class Dataset(object):
         
         # La búsqueda puede ser:
         #    - Por id : #
-        #    - Por índice : @
+        #    - Por índice : !
         #    - Por expresión a aplicar a cada nodo: $ / campo 
         lvalue = list(select_expression.keys())[0]
         rvalue = list(select_expression.values())[0]
@@ -250,7 +250,7 @@ class Dataset(object):
             return nodes_selected
         
         
-        if lvalue[0] == '@':
+        if lvalue[0] == '!':
             # la búsqueda es por índices
             # devolvemos todos los que estén en el index
             index_name = lvalue[1:]
@@ -303,14 +303,32 @@ class Dataset(object):
         return nodes_to_delete
     
 
+    def modify(self, select_expression, update_expression):
+        '''
+        Realiza modificaciones en lugar de sustituir un nodo por otro
+        > ds.modify({'ciudad':'Sevilla'}, {'ciudad':'Almería', 'edad':20})
+            carga el valor 'Almería' en el campo ciudad
+            carga el valor 20 en el campo 'edad'
+        > ds.modify({'#':35}, {'ciudad':'Almería'})
+            carga el valor 'Almería' en el campo ciudad
+        > ds.modify({'#':10}, {'ciudad':'@segunda_ciudad'})
+            carga el valor del campo @segunda_ciudad en el campo ciudad
+        '''
+        nodes_to_update = self.select_ids(select_expression)
+        if len(nodes_to_update) > 0:
+            pass    
+        
+        return nodes_to_update
+    
+    
+    
     def update(self, select_expression, new_node, force = False, referenced=False):
         '''
         Retorna el id nuevo. Lo que en realidad hace es borrar uno y sustituir uno.
         No es un auténtico UPDATE. Para eso usaremos el método "modify"
         El método "upsert" insertará aunque no haya localizado el nodo a cambiar
         '''
-        # TODO: métodos self.modify(), self.upsert()
-        
+        # TODO: métodos self.modify()
         nodes_to_update = self.select_ids(select_expression)
         if len(nodes_to_update) == 0:
             # no se localizan los nodos a sustituir
@@ -321,10 +339,23 @@ class Dataset(object):
             new_node_id = self.insert(new_node, force, referenced)
         else:
             raise Exception('Dataset.update()','The select expression selects more than one node')
-            
         return new_node_id
         
 
+    def upsert(self, select_expression, new_node, force = False, referenced=False):
+        '''
+        Retorna el id nuevo. Lo que en realidad hace es borrar uno y sustituir uno.
+        No es un auténtico UPDATE. Para eso usaremos el método "modify"
+        El método "upsert" insertará aunque no haya localizado el nodo a cambiar
+        '''
+        # TODO: métodos self.modify()
+        nodes_to_update = self.select_ids(select_expression)
+        if len(nodes_to_update) == 1:
+            self.delete_ids(nodes_to_update)
+        elif len(nodes_to_update) > 1:
+            raise Exception('Dataset.update()','The select expression selects more than one node')
+        new_node_id = self.insert(new_node, force, referenced)
+        return new_node_id
         
 
     def count(self):
