@@ -8,6 +8,13 @@ def normalizar_dos(nodo, nivel=1):
     
     { '$or': [{'ciudad':'Sevilla'}, { {'$round(3)':'peso'} : {'$gte':'@maximo'} ] }
     
+    { '$or': [{'ciudad':'Sevilla'}, { {'$round':['peso',3]} : {'$gte':'@maximo'} ] }
+    
+    { '$or': [{'ciudad':'Sevilla'}, { {'peso':{'$round':[3]}} : {'$gte':'@maximo'} ] }
+    
+    { '$or': [{'ciudad':'Sevilla'}, { '$eq':[{'$round':['peso',3]} : {'$gte':'@maximo'} ] }
+    
+    
     '''
     logical_operators = {
                 '$or':'list',     # { $or: [ { <expression1> }, { <expression2> }, ... , { <expressionN> } ] }
@@ -16,8 +23,25 @@ def normalizar_dos(nodo, nivel=1):
                 '$nor':'list'    # { $nor: [ { <expression1> }, { <expression2> }, ...  { <expressionN> } ] }
                 }
     
-    if len(nodo)>1:
-        # Hay un AND de algún tipo no reflejado con operador lógico
+    function_operators = {
+                '$round':'one',
+                '$fix':'one',
+                '$max':'list' # {$max : [val1, val2,... valn]}
+                }
+    
+    comparison_operators = {
+                '$eq':'list',
+                '$ne':'list',
+                '$gt':'two',
+                '$gte':'two',
+                '$lt':'two', # { $lte : [@campo, {$max : [val1, val2,... valn]}] }
+                '$lte':'two', # { $lte : [@campo, val] }
+                '$in':'list', # { $in : [@campo, val1, val2,... valn] }
+                '$nin':'list'
+                }
+    
+    if len(nodo)>1 and nivel==1:
+        # Hay un AND de algún tipo no reflejado con operador lógico en el primer nivel
         # {'ciudad':['Sevilla','Huelva'],     'edad':30} o
         # [{'ciudad':['Sevilla','Huelva'],     'edad':30}] =>
         # {'$and':[{'ciudad':['Sevilla','Huelva']},     {'edad':30}]}
@@ -31,63 +55,80 @@ def normalizar_dos(nodo, nivel=1):
                 nq['$and'].append(normalizar_dos({k: v},nivel+1))
         return nq
     
+    if len(nodo) > 1 and nivel > 1:
+        # se está intentando normalizar una lista que no está en el primer nivel
+        # según sea el operador habrá que tenerla en cuenta o no
+        
+        
     else:
         # tomamos el nodo y su parámetro (valor)
-        k = list(nodo.items())[0][0]
-        v = list(nodo.items())[0][1]
-        # ¿es operador lógico?
-        if k not in logical_operators: #('$and','$or','$not'):
-            # es un operador de expresión de comparación
-            # tratamos los valores a asignar
-            if isinstance(v,list):
-                # normalizar lista $in
-                nv = dict()
-                nv['$in'] = list()
-                for i in v:
-                    nv['$in'].append(i)
-                return { k: nv }
+        lvalue = list(nodo.items())[0][0]
+        rvalue = list(nodo.items())[0][1]
+
+        # lvalue = k
+        # rvalue = v
+        
+        # ¿De qué tipo es el LVALUE? (k)
+        
+        
+        if lvalue in logical_operators: #('$and','$or','$not'):
             
-            elif isinstance(v,dict):
-                # se supone que es un par clave:valor que
-                # incluye un diccionario (una expresión) como rvalue
-                return { k: v }
-            
-            else:
-                # Es un par clave valor, con lo que ponemos nosotros el
-                # operador $eq
-                return { k: {'$eq':v} }
-            
-        else:
             # es operador lógico
             # Si la lista que acompaña al operador solo tiene un elemento
             # contamos, de momento, con que los operadores son de lista de elementos
             # teniendo en cuenta que tenemos que introducir operadores unarios {'$not':{'ciudad':'sevilla'}}
-            if logical_operators[k] == 'one':
+            if logical_operators[lvalue] == 'one':
                 # es operador lógico unario
-                return { k: normalizar_dos(v, nivel+1)}
+                return { lvalue: normalizar_dos(rvalue, nivel+1)}
             else: # es un operador cuyo operando es una lista de elementos ($and o un $or)
                 # es operador lógico binario
-                if isinstance(v,list) or isinstance(v,tuple) or isinstance(v,set) or isinstance(v,dict):            
-                    if len(v) == 1: # si solo tiene un elemento en esa lista, quitamos el operador
+                if isinstance(rvalue,list) or isinstance(rvalue,tuple) or isinstance(rvalue,set) or isinstance(rvalue,dict):            
+                    if len(rvalue) == 1: # si solo tiene un elemento en esa lista, quitamos el operador
                         # Por ejemplo: {'$or':[{'ciudad':'Sevilla'}]}
                         # Pasa a convertirse en {'ciudad':'Sevilla'}
-                        if isinstance(v,list) or isinstance(v,tuple) or isinstance(v,set):
-                            return normalizar_dos(v[0], nivel+1)
+                        if isinstance(rvalue,list) or isinstance(rvalue,tuple) or isinstance(rvalue,set):
+                            return normalizar_dos(rvalue[0], nivel+1)
                         else:
                             # en caso de tupla se recoje como un elemento suelto... no se por qué!
-                            return normalizar_dos(v, nivel+1)
+                            return normalizar_dos(rvalue, nivel+1)
                     else:
                         # el operador trae una lista como parámetros de entrada
                         nv = dict()
-                        nv[k] = list() # Elemento con el operador como clave
+                        nv[lvalue] = list() # Elemento con el operador como clave
                         # pasamos a formar la lista con cada elemento 
                         # normalizado
-                        for i in v:
-                            nv[k].append(normalizar_dos(i, nivel+1))
+                        for i in rvalue:
+                            nv[lvalue].append(normalizar_dos(i, nivel+1))
                         return nv
                 else:
                     # un operador de lista debe llevar una lista
                     raise Exception('¿¿Pero esto que es...??','{<OperadorLógico>:<lista>|<dict>|<set>|<tupla>}')
+
+
+        # Si es un operador de función, verificar el formato
+        if lvalue in function_operators: #('$round'):
+            pass
+
+        # es un operador de expresión a evaluar
+        # tratamos los valores a asignar
+        if isinstance(rvalue,list):
+            # normalizar lista $in
+            nv = dict()
+            nv['$in'] = list()
+            for i in rvalue:
+                nv['$in'].append(i)
+            return { lvalue: nv }
+            
+        elif isinstance(rvalue,dict):
+            # se supone que es un par clave:valor que
+            # incluye un diccionario (una expresión) como rvalue
+            return { lvalue: rvalue }
+            
+        else:
+            # Es un par clave valor, con lo que ponemos nosotros el
+            # operador $eq
+            return { '$eq':[lvalue, rvalue] }
+            
 
 
                     
