@@ -54,6 +54,7 @@ class Dstools(unittest.TestCase):
                     [   {'$or':[{'@ciudad':['Málaga','Córdoba']}, {'$ne':['@edad',20]}]}, False  ],
                     [   {'$or':[{'$nin':['@ciudad','Málaga','Córdoba']}, {'$ne':['@edad',20]}]}, True  ],
                     # operador $or, $gt, $nin
+                    [   {'$gt':['@edad',23]}, False  ],
                     [   {'$or':[{'$nin':['@ciudad','Málaga','Córdoba']}, {'$gt':['@edad',19]}, {'@peso':65} ]}, True  ],
                     [   {'$or':[{'$nin':['@ciudad','Málaga','Sevilla','Córdoba']}, {'$gt':['@edad',23]}, {'@peso':65} ]}, False  ],
                     # operador $and, $gt, $nin
@@ -78,8 +79,14 @@ class Dstools(unittest.TestCase):
                     [   {'$ne':[{'$ne':['@ciudad','@destino']},{'@preferido':'Córdoba'}]}, True  ],
                     # $not
                     [   {'$not':[True]}, False  ],
-                    # funciones constantes
+                    # funciones constantes. casos de uso
                     [   {'$db':[]}, 'Lo que sea'  ],
+                    [   ['$db'], 'Lo que sea'  ],
+                    [   {'$eq':[{'$db':[]},'Lo que sea']}, True  ],
+                    [   {'$neq':[{'$db':[]},'Lo que sea']}, False  ],
+                    [   {'$eq':['$db','Lo que sea']}, True  ],
+                    [   {'$eq':['$db','Lo que sea'],'@ciudad':'Sevilla'}, True  ],
+                    [   [{'$eq':['$db','Lo que sea']},{'@ciudad':'Sevilla'}], True  ],
                   ]
 
         # print('testNormalizar')
@@ -138,40 +145,45 @@ class Dstools(unittest.TestCase):
                          
                   ]
         
+        print_debug = False
         # print('testNormalizar')
         n = 0
         for p in pruebas:
             n = n + 1
-            print()
-            print('*'*40)
-            print()
-            print('Prueba',str(n),p)
-            print()
+            if print_debug:
+                print()
+                print('*'*40)
+                print()
+                print('Prueba',str(n),p)
+                print()
             normalizado = dstools.normalizar(p[0])
             if p[1].__class__.__name__ == 'list':
-                print('Es una lista de posibles valores válidos...')
-                print('A normalizar:')
-                print(p[0])
-                print('Normalizado:')
-                print(normalizado)
+                if print_debug:
+                    print('Es una lista de posibles valores válidos...')
+                    print('A normalizar:')
+                    print(p[0])
+                    print('Normalizado:')
+                    print(normalizado)
                 resultado = False
                 # print('...--- ',p[1])
                 for r in p[1]:
-                    print('Valor a comparar:')
-                    print(r)
+                    if print_debug:
+                        print('Valor a comparar:')
+                        print(r)
                     if r == normalizado:
                         resultado = True
-                print('Fin de valores con los que comparar')
+                if print_debug:
+                    print('Fin de valores con los que comparar')
                 
                 self.assertTrue(resultado)
             else:
-                print('Solo hay un valor válido con el que comparar:')
-                print(p[1])
-                print('A normalizar:')
-                print(p[0])
-                print('Normalizado:')
-                print(normalizado)
-                
+                if print_debug:
+                    print('Solo hay un valor válido con el que comparar:')
+                    print(p[1])
+                    print('A normalizar:')
+                    print(p[0])
+                    print('Normalizado:')
+                    print(normalizado)
                 self.assertEqual(normalizado, p[1])
             
         

@@ -34,7 +34,7 @@ def normalizar(nodo, nivel=1):
                 }
 
     
-    
+    print_debug = False
     # numeric types: int, float, complex
     # text: str
     # sequence types: list, tuple, set, dict
@@ -78,6 +78,7 @@ def normalizar(nodo, nivel=1):
         # ¿De qué tipo es el LVALUE? (k)
         if lvalue in list(logical_operators.keys()) + list(function_operators.keys()) + list(comparison_operators.keys()):
             if rvalue.__class__.__name__ not in ('list','set','tuple'):
+                # print('DEBUG: nodo = ', nodo)
                 raise Exception('Logical operator / function / comparison operator requieres a list argument',
                                 'Given a type ' + rvalue.__class__.__name__)
             else:
@@ -276,8 +277,9 @@ def evalue(query, ds_element):
         }
     
     
-
-    print('DEBUG: evalue. ', query, query.__class__.__name__)
+    print_debug = False
+    if print_debug:
+        print('DEBUG: evalue. ', query, query.__class__.__name__)
     if query.__class__.__name__ == 'dict':
         lval = list(query.items())[0][0]
         rval = list(query.items())[0][1]

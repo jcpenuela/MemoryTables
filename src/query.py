@@ -57,7 +57,7 @@ class Query(object):
         '''
         Añade una pareja al árbol
         '''
-        self.expression = dict({'$not' :self.expression})
+        self.expression = dict({'$not' :[self.expression]})
         return self.expression
     
     def get_query(self):
