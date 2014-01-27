@@ -24,6 +24,7 @@ class Dataset(object):
     def __init__(self):
         self.next_element_id = 1    # siguiente id libre 
         self.nodes = dict()     # objetos en memoria { object_id : object }
+        self.connections = dict()   # Lista de conexiones entre nodos
         self.indexes = dict() # índices { index_name : DatasetIndex object }
         # Crea los índices internos
         i = index.DatasetIndex('_hash', self.nodes, 'hash')
@@ -317,8 +318,7 @@ class Dataset(object):
         # TODO: Por hacer esta parte
         nodes_to_update = self.select_ids(select_expression)
         if len(nodes_to_update) > 0:
-            pass    
-        
+            pass        
         return nodes_to_update
     
     
@@ -358,7 +358,15 @@ class Dataset(object):
         new_node_id = self.insert(new_node, force, referenced)
         return new_node_id
         
+        
+    def connect(self, node_to_connect):
+        '''
+        Conecta dos nodos del dataset
+        '''
+        # TODO: Conectar
+        pass
 
+    
     def count(self):
         '''
         Devuelve el número de nodos
