@@ -17,6 +17,7 @@ import fact
 import index
 import dstools
 import query
+import nodeslinks
 
 
 class Dataset(object):
@@ -24,7 +25,7 @@ class Dataset(object):
     def __init__(self):
         self.next_element_id = 1    # siguiente id libre 
         self.nodes = dict()     # objetos en memoria { object_id : object }
-        self.connections = dict()   # Lista de conexiones entre nodos
+        self.links = dict()   # Lista de conexiones entre nodos
         self.indexes = dict() # índices { index_name : DatasetIndex object }
         # Crea los índices internos
         i = index.DatasetIndex('_hash', self.nodes, 'hash')
@@ -359,12 +360,46 @@ class Dataset(object):
         return new_node_id
         
         
-    def connect(self, node_to_connect):
+    def connect(self, select_expression_1, select_expression_2, link_type = nodeslinks.NodesLinks.DIRECTIONAL):
         '''
         Conecta dos nodos del dataset
         '''
-        # TODO: Conectar
-        pass
+        nodes_source = self.select_ids(select_expression_1)
+        if len(nodes_source) == 0:
+            return []
+        
+        nodes_target = self.select_ids(select_expression_2)
+        if len(nodes_target) == 0:
+            return []
+        print(nodes_source)
+        print(nodes_target)
+        for source in nodes_source:
+            for target in nodes_target:
+                link = nodeslinks.NodesLinks(source,target)
+                if source not in self.links:
+                    self.links[source] = dict()
+                self.links[source][target] = link
+                if link_type == nodeslinks.NodesLinks.BIDIRECTIONAL:
+                    if target not in self.links:
+                        self.links[target] = dict()
+                    link = nodeslinks.NodesLinks(target,source)
+                    self.links[target] = link
+        print(self.links)
+
+    def linked_set(self, select_expression = None):
+        ''' 
+
+        '''
+        links = list()
+        nodes_selected = self.select_ids(select_expression)
+        for node in nodes_selected:
+            if node in self.links:
+                for target in self.links[node]:
+                    links.append([node,target])
+                    
+        return links
+                
+            
 
     
     def count(self):

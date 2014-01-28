@@ -157,6 +157,16 @@ class MemoryListTest(unittest.TestCase):
         anterior = t.select({'@nombre':'S18'})
         self.assertEqual(anterior,{})        
         
+    
+    def testConnect(self):
+        t = self.tabla
+        n1 = t.select({'@nombre':'S30'})
+        self.assertEqual(n1[2].nombre, 'S30')
+        t.connect({'@nombre':'S30'},{'@nombre':'C40'})
+        self.assertEqual(t.linked_set({'@nombre':'S30'}), [[2,5]])
+        t.connect({'@nombre':'S30'},{'@nombre':'Z29'})
+        self.assertEqual(t.linked_set(), [[2,5],[2,8]])
+        
 
 
 def carga_datos():
