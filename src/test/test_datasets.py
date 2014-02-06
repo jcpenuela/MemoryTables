@@ -166,6 +166,46 @@ class MemoryListTest(unittest.TestCase):
         self.assertEqual(t.linked_set({'@nombre':'S30'}), [[2,5]])
         t.connect({'@nombre':'S30'},{'@nombre':'Z29'})
         self.assertEqual(t.linked_set(), [[2,5],[2,8]])
+        t.connect({'@nombre':'S30'},{'@nombre':'Z29'})
+        self.assertEqual(t.linked_set(), [[2,5],[2,8]])
+        t.connect({'@nombre':'S30'},{'@ciudad':'Sevilla'})
+        self.assertEqual(sorted(t.linked_set()), [[2,1],[2,2],[2,5],[2,8]])
+        
+    def testCopiarDS(self):
+        t = self.tabla
+        
+        new_ds = t.select_dataset({'@ciudad':'Sevilla'})
+        self.assertEqual(new_ds.count(), 2)
+        self.assertEqual(new_ds.linked_set(), [])
+        
+        t.connect({'@nombre':'S30'},{'@ciudad':['Sevilla','Cádiz']})
+        new_ds = t.select_dataset({'@ciudad':'Sevilla'})
+        self.assertEqual(new_ds.count(), 2)
+        self.assertEqual(new_ds.linked_set(), [])
+        
+        # print('---------------------')
+        #####################
+        # VERIFICAR QUE AL COPIAR EL DS NO SE HACE REFERENCIA AL
+        # MISMO OBJETO
+        #####################
+        new_ds = t.select_dataset({'@ciudad':'Sevilla'},True)
+        self.assertEqual(new_ds.count(), 4)
+        # print(new_ds.nodes)
+        # print(t.nodes)
+        # print(new_ds.links)
+        # print(t.links)
+        self.assertEqual(sorted(new_ds.linked_set()), [[2,1],[2,2],[2,3],[2,4]])
+        self.assertEqual(new_ds.is_connected({'@nombre':'S30'},{'@ciudad':['Sevilla','Cádiz']}), True)
+        
+        # El siguiente es TRUE porque no tenemos 'Córdoba' en el nuevo dataset, así que el resultado
+        # es que entre S30 y Sevilla SI ESTAN TODOS CONECTADOS
+        self.assertEqual(new_ds.is_connected({'@nombre':'S30'},{'@ciudad':['Sevilla','Córdoba']}), True)
+        
+        self.assertEqual(t.is_connected({'@nombre':'S30'},{'@ciudad':['Sevilla']}), True)
+        self.assertEqual(t.is_connected({'@nombre':'S30'},{'@ciudad':['Córdoba']}), False)
+        
+
+
         
 
 

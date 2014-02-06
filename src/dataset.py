@@ -22,6 +22,7 @@ import nodeslinks
 
 class Dataset(object):
     
+    
     def __init__(self):
         self.next_element_id = 1    # siguiente id libre 
         self.nodes = dict()     # objetos en memoria { object_id : object }
@@ -184,11 +185,11 @@ class Dataset(object):
         selecciona ids del dataset. Devuelve una lista con los ids
         de los nodos seleccionados según la expresión
         expresión de query un diccionario
-        {'r':'expresión python búsqueda'}
         
-        { "persona": "persona.ciudad in ('Sevilla','Huelva') and persona.edad >= 30" }
-        { "!indice": "['andrés','luís']" }
-        { "#id" : "[123,34,55}" }
+        ( lambda x: x.ciudad = 'Sevilla' )
+        ({ '!indice': ['andrés','luís'] })
+        ({ '#id' : [123,34,55] })
+        ({ '@ciudad' : ['Sevilla','Huelva'] })
         
         '''
         
@@ -330,7 +331,6 @@ class Dataset(object):
         No es un auténtico UPDATE. Para eso usaremos el método "modify"
         El método "upsert" insertará aunque no haya localizado el nodo a cambiar
         '''
-        # TODO: métodos self.modify()
         nodes_to_update = self.select_ids(select_expression)
         if len(nodes_to_update) == 0:
             # no se localizan los nodos a sustituir
@@ -350,7 +350,6 @@ class Dataset(object):
         No es un auténtico UPDATE. Para eso usaremos el método "modify"
         El método "upsert" insertará aunque no haya localizado el nodo a cambiar
         '''
-        # TODO: métodos self.modify()
         nodes_to_update = self.select_ids(select_expression)
         if len(nodes_to_update) == 1:
             self.delete_ids(nodes_to_update)
@@ -371,8 +370,8 @@ class Dataset(object):
         nodes_target = self.select_ids(select_expression_2)
         if len(nodes_target) == 0:
             return []
-        print(nodes_source)
-        print(nodes_target)
+        # print(nodes_source)
+        # print(nodes_target)
         for source in nodes_source:
             for target in nodes_target:
                 link = nodeslinks.NodesLinks(source,target)
@@ -383,25 +382,91 @@ class Dataset(object):
                     if target not in self.links:
                         self.links[target] = dict()
                     link = nodeslinks.NodesLinks(target,source)
-                    self.links[target] = link
-        print(self.links)
+                    self.links[target] = link          
+        # print(self.links)
+        
+        
 
     def linked_set(self, select_expression = None):
         ''' 
-
+        
         '''
         links = list()
         nodes_selected = self.select_ids(select_expression)
-        for node in nodes_selected:
+        for node in sorted(nodes_selected):
             if node in self.links:
-                for target in self.links[node]:
+                for target in sorted(self.links[node]):
                     links.append([node,target])
-                    
         return links
-                
-            
-
     
+    
+    def is_connected(self, select_expression_1, select_expression_2):
+        ids_1 = self.select_ids(select_expression_1)
+        ids_2 = self.select_ids(select_expression_2)
+        # print(ids_1)
+        # print(ids_2)
+        for id_1 in ids_1:
+            for id_2 in ids_2:
+                if id_1 not in self.links:
+                    return False
+                if id_2 not in self.links[id_1]:
+                    return False
+        return True
+                
+        
+    def select_dataset(self, criteria, include_network = False):
+        
+        #
+        # ESTO ESTA LISTO.... en su forma básica, pero hay que diseñar una
+        # prueba unittest para corroborar su funcionamiento
+        #
+        
+        ds = Dataset()
+        nodes_selected = list()
+
+        nodes_selected = self.select_ids(criteria)
+            
+        # creamos un dataset con los mismos nodos.
+        # No se incluyen los índices
+        nodes_inserted = dict()
+        links_to_make = list()
+        
+        # print("nodes_selected:",nodes_selected)
+        # print("links: ",self.links)
+        while len(nodes_selected) > 0:
+            node = nodes_selected[0]
+            if node not in nodes_inserted:
+                new_node = ds.insert(self.nodes[node])
+                nodes_inserted[node] = new_node
+                # ¿Hay que incluir la red?
+                if include_network:
+                    # ¿Tiene conexiones?
+                    if node in self.links:
+                        # Para cada conexión del nodo
+                        for link in self.links[node]:
+                            # Si el nodo al que conecta no se ha insertado antes
+                            if link not in nodes_inserted:
+                                # Entonces insertamos en la cola de nodos a procesar
+                                nodes_selected.append(link)
+                            # Si el enlace no estaba ya
+                            if [node,link] not in links_to_make:
+                                # insertamos el enlace (con ids antiguos)
+                                links_to_make.append([node,link])
+                                
+            del(nodes_selected[0])
+            # print("quedan nodos:",nodes_selected)
+            
+        # print("links to make:",links_to_make)
+        while len(links_to_make) > 0:
+            ds.connect({"#":nodes_inserted[links_to_make[0][0]]},{"#":nodes_inserted[links_to_make[0][1]]})
+            del(links_to_make[0])
+            
+        return ds
+        
+
+
+        
+        
     def count(self):
         '''
         Devuelve el número de nodos
