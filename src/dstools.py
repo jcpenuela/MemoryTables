@@ -146,6 +146,9 @@ def select_ids(query, datos):
 
 
 
+  
+# operadores lógicos
+  
 def logical_operator_or(rval, ds_element):
     for i in rval:
         if evalue(i,ds_element):
@@ -227,6 +230,7 @@ def comparison_operator_nin(operands, ds_element):
             return False
     return True
 
+  
 # funciones
 def function_dummy(options, ds_element):
     return True
@@ -242,6 +246,8 @@ def function_false(ds_element):
 def function_db(ds_element):
     return 'Lo que sea'
 
+  
+  
 # evaluador
 def evalue(query, ds_element):
 

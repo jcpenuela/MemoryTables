@@ -5,6 +5,7 @@ Created on 08/08/2013
 '''
 import unittest
 import dstools
+import persona
 
 class Datos():
     def __init__(self):
@@ -14,8 +15,13 @@ class Dstools(unittest.TestCase):
 
 
     def setUp(self):
-        pass
-    
+        self.tabla = dataset.Dataset()
+        datos = carga_datos2()
+        for k,v in datos.items():
+            self.tabla.insert(v)
+        self.tabla.index('ciudad','ciudad')
+        self.tabla.index('pru','peso')    
+        
     def tearDown(self):
         pass
     
@@ -186,7 +192,39 @@ class Dstools(unittest.TestCase):
                     print(normalizado)
                 self.assertEqual(normalizado, p[1])
             
-        
+
+def carga_datos():
+    d = dict()
+    d[1] = {'nombre': 'S18', 'ciudad':'Sevilla', 'edad':18, 'peso':45.6 }
+    d[2] = {'nombre': 'S30', 'ciudad':'Sevilla', 'edad':30, 'peso':60.2 }
+    d[3] = {'nombre': 'H19', 'ciudad':'Huelva', 'edad':19, 'peso':75.3 }
+    d[4] = {'nombre': 'H25', 'ciudad':'Huelva', 'edad':25, 'peso':82.6 }
+    d[5] = {'nombre': 'C40', 'ciudad':'Córdoba', 'edad':40, 'peso':59.2 }
+    d[6] = {'nombre': 'C35', 'ciudad':'Córdoba', 'edad':35, 'peso':63.1 }
+    d[7] = {'nombre': 'Z42', 'ciudad':'Cádiz', 'edad':42, 'peso':75.5 }
+    d[8] = {'nombre': 'Z29', 'ciudad':'Cádiz', 'edad':29, 'peso':85.8 }
+    return d
+
+def carga_datos2():
+    d = dict()
+    p = persona.Persona('S18', 'Sevilla', 18, 45.6)
+    d[1] = p
+    p = persona.Persona('S30', 'Sevilla', 30, 60.2)
+    d[2] = p
+    p = persona.Persona('H19', 'Huelva', 19, 75.3)
+    d[3] = p
+    p = persona.Persona('H25', 'Huelva', 25, 82.6)
+    d[4] = p
+    p = persona.Persona('C40', 'Córdoba', 40, 59.2)
+    d[5] = p
+    p = persona.Persona( 'C35', 'Córdoba', 35, 63.1)
+    d[6] = p
+    p = persona.Persona('Z42', 'Cádiz', 42, 75.5)
+    d[7] = p
+    p = persona.Persona('Z29', 'Cádiz', 29, 85.8)
+    d[8] = p
+    return d
+             
         
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

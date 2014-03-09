@@ -200,12 +200,18 @@ class MemoryListTest(unittest.TestCase):
         # El siguiente es TRUE porque no tenemos 'Córdoba' en el nuevo dataset, así que el resultado
         # es que entre S30 y Sevilla SI ESTAN TODOS CONECTADOS
         self.assertEqual(new_ds.is_connected({'@nombre':'S30'},{'@ciudad':['Sevilla','Córdoba']}), True)
-        
         self.assertEqual(t.is_connected({'@nombre':'S30'},{'@ciudad':['Sevilla']}), True)
         self.assertEqual(t.is_connected({'@nombre':'S30'},{'@ciudad':['Córdoba']}), False)
+        # print('l>>>>>>')
+        # TODO: Test de linked_nodes()
+        t.linked_nodes({'@nombre':'S30'})
+
+
+    def testPlanesEjecucion(self):
+        t = self.tabla
+        new_ds = t.select_dataset({'@ciudad':'Sevilla'})
         
-
-
+        
         
 
 

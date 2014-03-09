@@ -23,30 +23,34 @@ import nodeslinks
 class Dataset(object):
     
     
-    def __init__(self):
-        self.next_element_id = 1    # siguiente id libre 
+    def __init__(self, name = None):
+        self.next_element_id = 1    # siguiente id libre
+        self.name = name
         self.nodes = dict()     # objetos en memoria { object_id : object }
         self.links = dict()   # Lista de conexiones entre nodos
+        self.groups = dict()   # Lista de grupos de nodos
         self.indexes = dict() # índices { index_name : DatasetIndex object }
+        self.metadata = dict() # metadata del dataset
+        self.nodes_metadata = dict() # metadata específica de cada nodo { node_id: { diccionario con metadata (clave, valor)} }
         # Crea los índices internos
         i = index.DatasetIndex('_hash', self.nodes, 'hash')
         self.indexes['_hash']=i
 
-    def __getitem__(self, key):
+    def __getitem__(self, node_id):
         '''
-        Devuelve un nodo por su clave
+        Devuelve un nodo por su id
         '''
-        return self.nodes[key]
+        return self.nodes[node_id]
 
-    def __delitem__(self, key):
+    def __delitem__(self, node_id):
         '''
-        Borra un nodo interno por su clave
+        Borra un nodo interno por su id
         '''
-        return self.delete({'#':key})
+        return self.delete({'#':node_id})
            
     def __iter__(self):
         '''        
-        Devuelve un iterador con los nodos del dataset
+        Devuelve un iterador con los nodos del dataset (node_id, node)
         '''
         for i,v in self.nodes.items():
             yield i,v
@@ -280,7 +284,11 @@ class Dataset(object):
             return nodes_selected
         
         # Es por expresión
+        # Se encarga la función select_ids del paquete dstools
+        
         nodes_selected = dstools.select_ids(select_expression, self.nodes)
+        # ¿Planes de ejecución ?
+        # nodes_selected = dstools.select_ids_planes(select_expression, self.nodes)
                        
         return nodes_selected
         
@@ -389,7 +397,7 @@ class Dataset(object):
 
     def linked_set(self, select_expression = None):
         ''' 
-        
+        Retorna [[source, target], [source, target],... , [source, target]]
         '''
         links = list()
         nodes_selected = self.select_ids(select_expression)
@@ -399,6 +407,25 @@ class Dataset(object):
                     links.append([node,target])
         return links
     
+
+    def linked_nodes(self, select_expression):
+        '''
+        Retorna { source_nodo_id: [{"node": nodo, "link": link_object}],  },
+        '''
+        nodes_to_return = dict()
+        nodes_selected = self.select_ids(select_expression)
+        for node in sorted(nodes_selected):
+            if node in self.nodes:
+                # print('links de ',node)
+                # print(self.links[node])
+                nodes_to_return[node] = list()
+                for target in sorted(self.links[node]):
+                    # print(target)
+                    nodes_to_return[node].append(dict({"node":self.nodes[target], "link":self.links[node][target]}))
+        # print( nodes_to_return)
+        return nodes_to_return
+        
+        
     
     def is_connected(self, select_expression_1, select_expression_2):
         ids_1 = self.select_ids(select_expression_1)
