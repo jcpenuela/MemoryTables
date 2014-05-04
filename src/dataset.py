@@ -13,11 +13,11 @@ import copy
 import pickle
 # import types
 # import MemoryListIndex as ix
-import fact
-import index
-import dstools
-import query
-import nodeslinks
+import src.fact as fact
+import src.index as index
+import src.dstools as dstools
+import src.query as query
+import src.nodeslinks as nodeslinks
 
 
 class Dataset(object):
@@ -230,7 +230,8 @@ class Dataset(object):
         rvalue = list(select_expression.values())[0]
         
         nodes_selected = list()
-        
+
+        # (1) Búsqueda por id
         if lvalue[0] == '#':
             # hay búsqueda por ids. Da lo mismo el resto...
             # devolvemos todos los que
@@ -240,12 +241,13 @@ class Dataset(object):
                 nodes_ids = eval(rvalue)
             else:
                 nodes_ids = rvalue
-                
+
+            # si es un entero lo convertimos en una lista de enteros
             if isinstance(nodes_ids,int):
                 nodes_ids = [nodes_ids]
                 
             if (isinstance(nodes_ids,list) or isinstance(nodes_ids,set) or isinstance(nodes_ids,tuple)) == False:   
-                raise Exception('Dataset.select()','RVALUE is not in list or int format')
+                raise Exception('Dataset.select()','RVALUE is not in list of ints or int format')
         
             # recorremos la lista de ids pedidos y si están como
             # clave en la lista de nodos existentes, se añade a la
@@ -256,7 +258,8 @@ class Dataset(object):
         
             return nodes_selected
         
-        
+
+        # (2) Búsqueda usando un índice
         if lvalue[0] == '!':
             # la búsqueda es por índices
             # devolvemos todos los que estén en el index
@@ -282,10 +285,10 @@ class Dataset(object):
                 except:
                     raise           
             return nodes_selected
-        
-        # Es por expresión
+
+
+        # (3) Es por expresión
         # Se encarga la función select_ids del paquete dstools
-        
         nodes_selected = dstools.select_ids(select_expression, self.nodes)
         # ¿Planes de ejecución ?
         # nodes_selected = dstools.select_ids_planes(select_expression, self.nodes)
@@ -326,9 +329,24 @@ class Dataset(object):
             carga el valor del campo @segunda_ciudad en el campo ciudad
         '''
         # TODO: Por hacer esta parte
+        # class Person(object):
+        #     def addattr(self,x,val):
+        #        self.__dict__[x]=val
+        # Método de añadir de forma dinámica una variable a un objeto
         nodes_to_update = self.select_ids(select_expression)
         if len(nodes_to_update) > 0:
-            pass        
+            lvalue = list(update_expression.keys())[0]
+            rvalue = list(update_expression.values())[0]
+
+            if lvalue[0] == '$':
+                # se trata de una llamada a una función del lenguaje
+                for node_id in nodes_to_update:
+                    dstools.evalue(update_expression,self.nodes[node_id])
+            else:
+                # se trata de una modificación o asignación a un atributo existente o nuevo
+                for node_id in nodes_to_update:
+                    value_to_assign = dstools.evalue(rvalue,self.nodes[node_id])
+                    self.nodes[node_id].__dict__[lvalue]=value_to_assign
         return nodes_to_update
     
     

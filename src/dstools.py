@@ -138,10 +138,14 @@ def select_ids(query, datos):
     query = normalizar(query)
     
     nodes_selected = list()
+    # recorremos el dataset pasado en datos
+    # para cada elemento del dataset aplicamos la expresión
     for ds_id, ds_element in datos.items():
+        # vemos si casa la query con el elemento concreto
         if evalue(query, ds_element):
+            # si la consulta casa con el elemento, lo añadimos
             nodes_selected.append(ds_id)
-        
+
     return nodes_selected
 
 
@@ -232,6 +236,16 @@ def comparison_operator_nin(operands, ds_element):
 
   
 # funciones
+def function_del_attribute(options, ds_element):
+    '''
+    Elimina el atributo que trae en options
+    '''
+    try:
+        delattr(ds_element, options[0])
+        return True
+    except AttributeError:
+        return False
+
 def function_dummy(options, ds_element):
     return True
 
@@ -271,6 +285,7 @@ def evalue(query, ds_element):
         }
 
     functions = {
+        '$del_attribute':function_del_attribute,
         '$round':function_dummy,
         '$fix':function_dummy,
         '$max':function_dummy, # {$max : [val1, val2,... valn]},
@@ -286,39 +301,63 @@ def evalue(query, ds_element):
     print_debug = False
     if print_debug:
         print('DEBUG: evalue. ', query, query.__class__.__name__)
+
+    # si la consulta viene en format diccionario es porque se trata de una
+    # función ('$funcion':[parametros]), esta puede ser un operador de comparación,
+    # o bien una función lógica o una función del lenguaje de consultas como '$max'
+    # (de momento todas dirigidas a dummy()) que lleva parámetros
     if query.__class__.__name__ == 'dict':
         lval = list(query.items())[0][0]
         rval = list(query.items())[0][1]
         # print('lval:',lval,'rval:',rval)
+
         if lval in logical_operators: # ('$or','$and','$not'): 
             # es operador lógico
             return logical_operators[lval](rval, ds_element)
-        elif lval in comparison_operators: # ('$or','$and','$not'): 
+
+        elif lval in comparison_operators: # ('$gt','$gte',...):
             # es operador lógico
             return comparison_operators[lval](rval, ds_element)
-        elif lval in functions:
-            return comparison_operators[lval](rval, ds_element)
+
+        elif lval in functions:  # ('$max', $min,...)
+            return functions[lval](rval, ds_element)
+
         # TODO: Esto hay que revisarlo... estoy dando por bueno que llegue como
-        # función o como constante más abajo
+        # función o como constante de cadena (más abajo)
         elif lval in constant_operators:
             return constant_operators[lval](ds_element)
+
         else:
             raise Exception('select.evalue()','operador no contemplado:' + list(rval.items())[0][0])
+
     # es una lista o un elemento primitivo
     elif query.__class__.__name__ in ('int','float','complex','bool'):
+        # el resultado de evaluar estos tipos es el mismo valor
         return query
-    
+
+    # el valor a evaluar viene en formato de cadena, hay que interpretar
+    # la cadena
     elif query.__class__.__name__ in ('str'):
-        if query[0] == '@' and query[1] != '@': # Doble @ => @ 
+
+        # @campo => hay que recoger el contenido del campo "campo" del objeto
+        if query[0] == '@' and query[1] != '@': # Doble @ => @
+            # Hay que comprobar si el atributo existe, porque podría no ser así
+            # en caso de que el atributo no exista, se retorna nulo
+
             # devolver el valor del campo
             # getattr(x,'campo') == x.campo
             # print('return ',getattr(ds_element,query[1:]))
-            return getattr(ds_element,query[1:])
+            try:
+                return getattr(ds_element,query[1:])
+            except AttributeError:
+                return None
+
         # si se trata de una constante de operador (función sin parámetros)
-        # llamamos a la función
+        # llamamos a la función ($true, $false, $db, ..... lo que sea, que no lleva parámetros
         if query[0] == '$' and query in constant_operators:
             return constant_operators[query](ds_element)
-        # si no, devolver la cadena o el elemento que sea 
+
+        # si no, contamos con que es una cadena y la devolvemos tal cual
         return query
     
     # este últimop bloque no debería ejecutarse...

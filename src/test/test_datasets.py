@@ -4,9 +4,9 @@ Created on 08/08/2013
 @author: jcpenuela
 '''
 import unittest
-import persona
-import dataset
-import query
+import src.persona as persona
+import src.dataset as dataset
+import src.query as query
 
 
 class MemoryListTest(unittest.TestCase):
@@ -23,8 +23,7 @@ class MemoryListTest(unittest.TestCase):
     def tearDown(self):
         pass
 
-
-    def testInsert(self):
+    def test_insert(self):
         # print('testInsert.....')
         self.assertEqual(self.tabla.count(), 8)
         # No debe insertar el nodo al estar duplicado
@@ -38,7 +37,7 @@ class MemoryListTest(unittest.TestCase):
         self.assertEqual(sorted(list(self.tabla.select().keys())), [1,2,3,4,5,6,7,8,9,10])
         
         
-    def testSelect(self):
+    def test_select(self):
         # print('testSelect.....')
         t = self.tabla
         seleccionados = t.select({'#':1})
@@ -57,7 +56,7 @@ class MemoryListTest(unittest.TestCase):
         self.assertEqual(sorted(list(seleccionados.keys())), [5,7])
         seleccionados = t.select({'!ciudad':['Sevilla','Córdoba','Huelva']})
         self.assertEqual(list(seleccionados.keys()), [1,2,3,4,5,6])
-        seleccionados = t.select({'@nombre':'S30'})
+        seleccionados = t.select({'@nombre': 'S30'})
         self.assertEqual(list(seleccionados.keys()), [2])
         seleccionados = t.select({'@ciudad':['Sevilla','Cádiz']})
         self.assertEqual(sorted(list(seleccionados.keys())), [1,2,7,8])
@@ -68,7 +67,7 @@ class MemoryListTest(unittest.TestCase):
 
         
         
-    def testQuery(self):
+    def test_query(self):
         # print('testQuery.....')
         t = self.tabla
         q = query.Query()
@@ -88,13 +87,17 @@ class MemoryListTest(unittest.TestCase):
 
     
     
-    def testSelect_ids(self):
+    def test_select_ids(self):
         # print('testSelect.....')
         t = self.tabla
         seleccionados = t.select_ids({'#':1})
         self.assertEqual(seleccionados, [1])
         seleccionados = t.select_ids({'#':[1,3]})
-        self.assertEqual(seleccionados, [1,3]) 
+        self.assertEqual(seleccionados, [1,3])
+        seleccionados = t.select_ids({'#':'1+2'}) # Evalua la expresión
+        self.assertEqual(seleccionados, [3])
+        seleccionados = t.select_ids({'#':'max(1,3,2)'}) # Evalua la expresión
+        self.assertEqual(seleccionados, [3])
         seleccionados = t.select_ids({'#':9})
         self.assertEqual(seleccionados, [])
         seleccionados = t.select_ids({'#':[4,9]})
@@ -117,7 +120,7 @@ class MemoryListTest(unittest.TestCase):
         
         
     
-    def testDelete(self):
+    def test_delete(self):
         # print('testDelete.....')
         t = self.tabla
         t.delete({'#':1})
@@ -136,7 +139,7 @@ class MemoryListTest(unittest.TestCase):
         self.assertEqual(sorted(list(t.nodes.keys())), [3,6,9])
         
         
-    def testUpdates(self):
+    def test_updates(self):
         t = self.tabla
         anterior = t.select_ids({'@nombre':'S18'})
         self.assertEqual(anterior,[1])
@@ -147,7 +150,7 @@ class MemoryListTest(unittest.TestCase):
         self.assertEqual(anterior,{})
 
     
-    def testUpsert(self):
+    def test_upsert(self):
         t = self.tabla
         anterior = t.select_ids({'@nombre':'S18'})
         self.assertEqual(anterior,[1])
@@ -157,8 +160,42 @@ class MemoryListTest(unittest.TestCase):
         anterior = t.select({'@nombre':'S18'})
         self.assertEqual(anterior,{})        
         
-    
-    def testConnect(self):
+
+    def test_modify(self):
+        t = self.tabla
+        anterior = t.select_ids({'@nombre':'S18'})
+        self.assertEqual(anterior,[1])
+        nuevo_id = t.modify({'#':1},{'nombre':'S99'})
+        self.assertEqual(nuevo_id,[1])
+        anterior = t.select({'@nombre':'S18'})
+        self.assertEqual(anterior,{})
+        anterior = t.select_ids({'@nombre':'S99'})
+        self.assertEqual(anterior,[1])
+        anterior = t.select_ids({'@nombre':'H19'})
+        self.assertEqual(anterior,[3])
+        anterior = t.select_ids({'@ciudad':'Huelva'})
+        self.assertEqual(anterior,[3,4])
+        nuevo_id = t.modify({'@nombre':'H19'},{'ciudad':'@nombre'})
+        anterior = t.select_ids({'@ciudad':'Huelva'})
+        self.assertEqual(anterior,[4])
+        anterior = t.select_ids({'@ciudad':'H19'})
+        self.assertEqual(anterior,[3])
+        nuevo_id = t.modify({'@nombre':'H19'},{'ciudad':'Huelva'})
+        self.assertEqual(anterior,[3])
+        anterior = t.select_ids({'@ciudad':'Huelva'})
+        self.assertEqual(anterior,[3,4])
+        nuevo_id = t.modify({'@nombre':'H19'},{'es_huelva':'Otra'})
+        self.assertEqual(nuevo_id,[3])
+        anterior = t.select_ids({'@es_huelva':'Otra'})
+        self.assertEqual(anterior,[3])
+        # la modificación siguiente consiste en ejecutar una función del propio lenguaje
+        nuevo_id = t.modify({'@es_huelva':'Otra'},{'$del_attribute':['es_huelva']})
+        self.assertEqual(nuevo_id,[3])
+        anterior = t.select_ids({'@es_huelva':'Otra'})
+        self.assertEqual(anterior,[])
+
+
+    def test_connect(self):
         t = self.tabla
         n1 = t.select({'@nombre':'S30'})
         self.assertEqual(n1[2].nombre, 'S30')
@@ -171,7 +208,7 @@ class MemoryListTest(unittest.TestCase):
         t.connect({'@nombre':'S30'},{'@ciudad':'Sevilla'})
         self.assertEqual(sorted(t.linked_set()), [[2,1],[2,2],[2,5],[2,8]])
         
-    def testCopiarDS(self):
+    def test_copiarDS(self):
         t = self.tabla
         
         new_ds = t.select_dataset({'@ciudad':'Sevilla'})
@@ -207,7 +244,7 @@ class MemoryListTest(unittest.TestCase):
         t.linked_nodes({'@nombre':'S30'})
 
 
-    def testPlanesEjecucion(self):
+    def test_planesEjecucion(self):
         t = self.tabla
         new_ds = t.select_dataset({'@ciudad':'Sevilla'})
         

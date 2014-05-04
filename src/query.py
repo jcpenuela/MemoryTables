@@ -3,7 +3,7 @@ Created on 19/01/2014
 
 @author: jcpenuela
 '''
-import dstools
+import src.dstools as dstools
 
 class Query(object):
     '''
