@@ -38,12 +38,17 @@ def normalizar(nodo, nivel=1):
     # numeric types: int, float, complex
     # text: str
     # sequence types: list, tuple, set, dict
+    if nodo is None:
+        return nodo
 
     if nodo.__class__.__name__ in ('int','float','complex','str','bool'):
         # es un tipo considerado primitivo
         return nodo
     
     # es un tipo de lista, tupla, set o dict
+    if len(nodo) == 0:
+        return nodo
+
     if len(nodo)>1:
         if nivel == 1:
             nq = dict()
@@ -148,6 +153,32 @@ def select_ids(query, datos):
 
     return nodes_selected
 
+def optimized_select_ids(query, datos):
+    # IMPORTANTE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+    # class Person(object):
+    #     def addattr(self,x,val):
+    #        self.__dict__[x]=val
+    # Método de añadir de forma dinámica una variable a un objeto
+
+    '''
+    '''
+    query = normalizar(query)  # Convertimos la consulta en un árbol
+    nodes_selected = list()
+
+    # localizamos los nodos finales de la query
+    final_query_nodes = list()
+
+    # recorremos la consulta desde el nodo inicial
+
+    # recorremos el dataset pasado en datos
+    # para cada elemento del dataset aplicamos la expresión
+    for ds_id, ds_element in datos.items():
+        # vemos si casa la query con el elemento concreto
+        if evalue(query, ds_element):
+            # si la consulta casa con el elemento, lo añadimos
+            nodes_selected.append(ds_id)
+
+    return nodes_selected
 
 
   
