@@ -1,43 +1,49 @@
 import dstools
 # Recoge la consulta, 
+
+import src.EXPTree as EXPtree
+
 def optimizer(query, metadata):
     normalized_query = dstools.normalizar(query)
     print(normalized_query)
-    optimized_query = normalized_query
-    return optimized_query
+    arbol = EXPtree.EXPTree()
+    query_en_arbol = query_a_arbol(query, arbol)
+    return
 
-    
-def elemento(exp):
-    
+def dummy():
+    pass
+
+def query_a_arbol(query, arbol):
+
     logical_operators = {
-        '$or':logical_operator_or,     # { $or: [ { <expression1> }, { <expression2> }, ... , { <expressionN> } ] }
-        '$and':logical_operator_and,    # { $and: [ { <expression1> }, { <expression2> } , ... , { <expressionN> } ] }
-        '$not':logical_operator_not,    # { field: { $not: { <operator-expression> } } }
-        '$nor':logical_operator_nor,    # { $nor: [ { <expression1> }, { <expression2> }, ...  { <expressionN> } ] }
-        '$xor':logical_operator_xor    # { $nor: [ { <expression1> }, { <expression2> }, ...  { <expressionN> } ] }
+        '$or':dummy, # logical_operator_or,     # { $or: [ { <expression1> }, { <expression2> }, ... , { <expressionN> } ] }
+        '$and':dummy, # logical_operator_and,    # { $and: [ { <expression1> }, { <expression2> } , ... , { <expressionN> } ] }
+        '$not':dummy, # logical_operator_not,    # { field: { $not: { <operator-expression> } } }
+        '$nor':dummy, # logical_operator_nor,    # { $nor: [ { <expression1> }, { <expression2> }, ...  { <expressionN> } ] }
+        '$xor':dummy, # logical_operator_xor    # { $nor: [ { <expression1> }, { <expression2> }, ...  { <expressionN> } ] }
         }
     
     comparison_operators = {
-        '$eq':comparison_operator_eq,     # { field: {$eq: value} }
-        '$ne':comparison_operator_ne,     # { field: {$ne: value} }
-        '$gt':comparison_operator_gt,     # { field: {$gt: value} }
-        '$gte':comparison_operator_gte,   # { field: {$gte: value} }
-        '$lt':comparison_operator_lt,     # { field: {$lt: value} }
-        '$lte':comparison_operator_lte,   # { field: {$lte: value} }
-        '$in':comparison_operator_in,     # { field: {$in: [<value1>, <value2>, ... <valueN> ]} }
-        '$nin':comparison_operator_nin    # { field: {$nin: [ <value1>, <value2> ... <valueN> ]} }
+        '$eq':dummy, # comparison_operator_eq,     # { field: {$eq: value} }
+        '$ne':dummy, # comparison_operator_ne,     # { field: {$ne: value} }
+        '$gt':dummy, # comparison_operator_gt,     # { field: {$gt: value} }
+        '$gte':dummy, # comparison_operator_gte,   # { field: {$gte: value} }
+        '$lt':dummy, # comparison_operator_lt,     # { field: {$lt: value} }
+        '$lte':dummy, # comparison_operator_lte,   # { field: {$lte: value} }
+        '$in':dummy, # comparison_operator_in,     # { field: {$in: [<value1>, <value2>, ... <valueN> ]} }
+        '$nin':dummy, # comparison_operator_nin    # { field: {$nin: [ <value1>, <value2> ... <valueN> ]} }
         }
 
     functions = {
-        '$round':function_dummy,
-        '$fix':function_dummy,
-        '$max':function_dummy, # {$max : [val1, val2,... valn]},
-        '$minAcum':function_dummy
+        '$round':dummy, # function_dummy,
+        '$fix':dummy, # function_dummy,
+        '$max':dummy, # function_dummy, # {$max : [val1, val2,... valn]},
+        '$minAcum':dummy, # function_dummy
         }
     constant_operators = {
-        '$true':function_true,
-        '$false':function_false,
-        '$db':function_db
+        '$true':dummy, # function_true,
+        '$false':dummy, # function_false,
+        '$db':dummy, # function_db
         }
     
     
@@ -48,20 +54,12 @@ def elemento(exp):
         lval = list(query.items())[0][0]
         rval = list(query.items())[0][1]
         # print('lval:',lval,'rval:',rval)
-        if lval in logical_operators: # ('$or','$and','$not'): 
-            # es operador lógico
-            return logical_operators[lval](rval, ds_element)
-        elif lval in comparison_operators: # ('$or','$and','$not'): 
-            # es operador lógico
-            return comparison_operators[lval](rval, ds_element)
-        elif lval in functions:
-            return comparison_operators[lval](rval, ds_element)
-        # TODO: Esto hay que revisarlo... estoy dando por bueno que llegue como
-        # función o como constante más abajo
-        elif lval in constant_operators:
-            return constant_operators[lval](ds_element)
-        else:
-            raise Exception('select.evalue()','operador no contemplado:' + list(rval.items())[0][0])
+        nodo = EXPtree.EXPNode(lval)
+        arbol.add_node_at_left(nodo)
+        for h in rval:
+            nodo = EXPtree.EXPNode(h)
+            arbol.add_node_at_left(query_a_arbol(h,arbol))
+        return #return logical_operators[lval](rval, ds_element)
     # es una lista o un elemento primitivo
     elif query.__class__.__name__ in ('int','float','complex','bool'):
         return query
