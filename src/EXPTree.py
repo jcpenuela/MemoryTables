@@ -257,8 +257,16 @@ class EXPTree(object):
         new_subtree = EXPTree()
         old_root_node_id = list(tree_structure.keys())[0]
         new_subtree.add_node_as_root(nodes[old_root_node_id])
-        print(new_subtree.root)
-        for subtree_estructure in tree_structure[old_root_node_id]:
-            new_subtree.add_tree_at_right(EXPTree.build_tree(subtree_estructure,nodes), new_subtree.root)
+        # print(new_subtree.root, old_root_node_id)
+        if not tree_structure[old_root_node_id]:
+            print('no tiene hijos')
+        else:
+            for subtree_estructure in tree_structure[old_root_node_id]:
+                print('subtree structure:',subtree_estructure)
+                b = EXPTree.build_tree(subtree_estructure,nodes)
+                print(b.sons)
+                new_subtree.add_tree_at_right(b, new_subtree.root)
+                print('T:',new_subtree.sons)
+        return new_subtree
 
 
