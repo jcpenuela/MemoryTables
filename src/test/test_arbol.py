@@ -155,6 +155,7 @@ class EXPTreeTest(unittest.TestCase):
         tree = load_tree() # [15:[1:[4,0,5:[10,12:[13:[8:[6,11]]],9,7],2,14,3]]]
         tree2 = load_tree2() # [0:[3,1:[4],2]]
         # print(self.tree.sons)
+        print({0:[{3:[]},{1:[{4:[]}]},{2:[]}]})
         nt2 = EXPTree.EXPTree.build_tree(tree2.get_tree_links(),tree2.nodes)
         self.assertEqual(nt2.sons[0],[3,1,2])
         print(nt2.get_tree_links())

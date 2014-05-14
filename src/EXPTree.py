@@ -249,24 +249,30 @@ class EXPTree(object):
 
 
     # Funciones de clase
-    def build_tree(tree_structure, nodes):
+    def build_tree(tree_structure, nodes, nivel = 0):
         """
         Construye un árbol en base a la lista de nodos y los enlaces entre ellos
         {0:[{3:[]},{1:[{4:[]}]},{2:[]}]}
         """
+        tabulado = "    " * nivel
+        print(tabulado, 'Creando subarbol. Nodo raíz original:',list(tree_structure.keys())[0])
         new_subtree = EXPTree()
         old_root_node_id = list(tree_structure.keys())[0]
         new_subtree.add_node_as_root(nodes[old_root_node_id])
         # print(new_subtree.root, old_root_node_id)
         if not tree_structure[old_root_node_id]:
-            print('no tiene hijos')
+            print(tabulado, 'no tiene hijos')
         else:
+            print(tabulado, '[' + str(old_root_node_id) + '] original tiene hijos')
+            n = 1
             for subtree_estructure in tree_structure[old_root_node_id]:
-                print('subtree structure:',subtree_estructure)
-                b = EXPTree.build_tree(subtree_estructure,nodes)
-                print(b.sons)
+                print(tabulado, 'estructura del hijo orden',n, ' => ',subtree_estructure)
+                b = EXPTree.build_tree(subtree_estructure,nodes,nivel + 1)
+                print(tabulado, 'estructura creada:',b.sons)
+                print(tabulado, 'la añadimos al árbol de original ['+str(old_root_node_id)+']')
                 new_subtree.add_tree_at_right(b, new_subtree.root)
-                print('T:',new_subtree.sons)
+                print(tabulado, 'sons de estructura creada:',new_subtree.sons)
+                n += 1
         return new_subtree
 
 
