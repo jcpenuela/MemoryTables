@@ -96,12 +96,14 @@ class EXPTree(object):
                 self.sons[father_id + new_initial_node_id].append(son_id + new_initial_node_id)
             del(self.sons[father_id])
         self.root = self.root + new_initial_node_id
-        return [self.root, self.last_node_id]
+        # print('renumber:',self.sons)
+        return [self.root, max(self.sons)]
 
 
-    def add_tree_at_left(self, new_tree, father):
+    def add_tree_at_left(self, tree, father):
         if father not in self.fathers:
             raise Exception('Nodo id: ' + father + ' no existe')
+        new_tree = tree.get_new_subtree()
         [new_subtree_root_id, new_last_node_id] = new_tree.renumber_existent_nodes(self.last_node_id + 1)
         self.sons[father] = [new_subtree_root_id] + self.sons[father]
         self.fathers.update(new_tree.fathers)
@@ -112,10 +114,12 @@ class EXPTree(object):
         return new_subtree_root_id
 
 
-    def add_tree_at_right(self, new_tree, father):
+    def add_tree_at_right(self, tree, father):
         if father not in self.fathers:
             raise Exception('Nodo id: ' + father + ' no existe')
+        new_tree = tree.get_new_subtree()
         [new_subtree_root_id, new_last_node_id] = new_tree.renumber_existent_nodes(self.last_node_id + 1)
+        # print('>>',[new_subtree_root_id, new_last_node_id])
         self.sons[father] = self.sons[father] + [new_subtree_root_id]
         self.fathers.update(new_tree.fathers)
         self.fathers[new_subtree_root_id]=father
@@ -124,14 +128,15 @@ class EXPTree(object):
         self.last_node_id = new_last_node_id
         return new_subtree_root_id
 
-    def add_tree_at_position(self, new_tree, father, position):
+    def add_tree_at_position(self, tree, father, position):
         if father not in self.fathers:
             raise Exception('Nodo id: ' + father + ' no existe')
         if len(self.sons[father]) < position:
-            return self.add_tree_at_right(new_tree, father)
+            return self.add_tree_at_right(tree, father)
         elif position == 0:
-            return self.add_tree_at_left(new_tree, father)
+            return self.add_tree_at_left(tree, father)
         else:
+            new_tree = tree.get_new_subtree()
             [new_subtree_root_id, new_last_node_id] = new_tree.renumber_existent_nodes(self.last_node_id + 1)
             self.sons[father] = self.sons[father][0:position] + [new_subtree_root_id] + self.sons[father][position:]
             self.fathers.update(new_tree.fathers)
@@ -224,19 +229,26 @@ class EXPTree(object):
         return tree_links
 
 
+    def get_new_subtree(self, node_id = None):
+        return EXPTree.build_tree(self.get_tree_links(node_id),self.nodes)
 
 
-    def get_subtree(self, node_id):
-        pass
-
-    def get_final_subtrees(self):
+    def get_final_subtrees(self, func=None):
         """
         Devuelve los últimos árboles (nodos con hijos) de la estructura
         """
+        # TODO: REVISAR
         subtrees_list = dict()
         nodes_visited = list()
-        for node_id in self.sons:
-            if self.sons[node_id]:
+
+        for node_id in [x for x in self.sons if not self.sons[x]]:
+            father_id = self.fathers[node_id]
+            if func:
+                while not func(self.nodes[father_id]):
+                    father_id = self.fathers[father_id]
+            if father_id not in subtrees_list:
+
+            subtrees_list[father_id] = self.get_new_subtree(self.fathers[node_id])
                 father_id = self.fathers[node_id]
                 if father_id not in nodes_visited:
                     nodes_visited.append(father_id)
@@ -255,23 +267,25 @@ class EXPTree(object):
         {0:[{3:[]},{1:[{4:[]}]},{2:[]}]}
         """
         tabulado = "    " * nivel
-        print(tabulado, 'Creando subarbol. Nodo raíz original:',list(tree_structure.keys())[0])
+        # print(tabulado, 'Creando subarbol. Nodo raíz original:',list(tree_structure.keys())[0])
         new_subtree = EXPTree()
         old_root_node_id = list(tree_structure.keys())[0]
         new_subtree.add_node_as_root(nodes[old_root_node_id])
         # print(new_subtree.root, old_root_node_id)
         if not tree_structure[old_root_node_id]:
-            print(tabulado, 'no tiene hijos')
+            # print(tabulado, 'no tiene hijos')
+            pass
         else:
-            print(tabulado, '[' + str(old_root_node_id) + '] original tiene hijos')
+            # print(tabulado, '[' + str(old_root_node_id) + '] original tiene hijos')
             n = 1
             for subtree_estructure in tree_structure[old_root_node_id]:
-                print(tabulado, 'estructura del hijo orden',n, ' => ',subtree_estructure)
+                # print(tabulado, 'estructura del hijo orden',n, ' => ',subtree_estructure)
                 b = EXPTree.build_tree(subtree_estructure,nodes,nivel + 1)
-                print(tabulado, 'estructura creada:',b.sons)
-                print(tabulado, 'la añadimos al árbol de original ['+str(old_root_node_id)+']')
+                # print(tabulado, 'estructura creada desde',subtree_estructure,'=>',b.sons)
+                # print(tabulado, 'la añadimos al árbol de original ['+str(old_root_node_id)+']')
+                # print(tabulado, '"sons" antes de añadirlo:',new_subtree.sons)
                 new_subtree.add_tree_at_right(b, new_subtree.root)
-                print(tabulado, 'sons de estructura creada:',new_subtree.sons)
+                # print(tabulado, '"sons" una vez añadida la nueva estructura creada:',new_subtree.sons)
                 n += 1
         return new_subtree
 

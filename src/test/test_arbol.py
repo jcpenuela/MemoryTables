@@ -124,7 +124,7 @@ class EXPTreeTest(unittest.TestCase):
         self.assertEqual(self.tree.sons[21], [26,28,25,23])
         self.assertEqual(self.tree.sons[31], [17])
         # print('------------------')
-        print(self.tree.sons)
+        # print(self.tree.sons)
         # print('------------------')
 
     def test_insert_tree(self):
@@ -134,12 +134,17 @@ class EXPTreeTest(unittest.TestCase):
         self.assertEqual(tree2.sons[0], [3,1,2])
         self.assertEqual(tree.sons[4], [])
         tree.add_tree_at_left(tree2,4)
+        # print('1>>>>>',tree.sons)
         self.assertEqual(tree.sons[4], [16])
+        self.assertEqual(tree.sons[16], [17,18,20])
         tree.add_tree_at_left(tree2,5)
+        # print('2>>>>>',tree.sons)
         self.assertEqual(tree.sons[5], [21,10,12,9,7])
         tree.add_tree_at_position(tree2,5,2)
+        self.assertEqual(tree.sons[21], [22,23,25])
+        # print('3>>>>>',tree.sons)
         self.assertEqual(tree.sons[5], [21,10,26,12,9,7])
-        self.assertEqual(tree.sons[26], [29,27,28])
+        self.assertEqual(tree.sons[26], [27,28,30])
         # print(tree.nodes)
 
     def test_tree_links(self):
@@ -155,10 +160,10 @@ class EXPTreeTest(unittest.TestCase):
         tree = load_tree() # [15:[1:[4,0,5:[10,12:[13:[8:[6,11]]],9,7],2,14,3]]]
         tree2 = load_tree2() # [0:[3,1:[4],2]]
         # print(self.tree.sons)
-        print({0:[{3:[]},{1:[{4:[]}]},{2:[]}]})
+        # print({0:[{3:[]},{1:[{4:[]}]},{2:[]}]})
         nt2 = EXPTree.EXPTree.build_tree(tree2.get_tree_links(),tree2.nodes)
-        self.assertEqual(nt2.sons[0],[3,1,2])
-        print(nt2.get_tree_links())
+        self.assertEqual(nt2.sons[0],[1,2,4])
+        # print(nt2.get_tree_links())
 
 
 def load_tree():
