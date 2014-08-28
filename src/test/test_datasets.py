@@ -132,11 +132,14 @@ class MemoryListTest(unittest.TestCase):
         t.delete(lambda x:x.ciudad in ('Sevilla','Cádiz'))
         self.assertEqual(sorted(list(t.nodes.keys())), [3,4,6])
         q = query.Query()
-        q.add_and({'$gt':['@peso',80]})
+        # q.add_and({'$gt':['@peso',80]})
+        q.add_and({'@peso':82.5})
         t.delete(q)
-        self.assertEqual(sorted(list(t.nodes.keys())), [3,6])
+        # self.assertEqual(sorted(list(t.nodes.keys())), [3,6])
+        self.assertEqual(sorted(list(t.nodes.keys())), [6])
         t.insert(persona.Persona('S18', 'Sevilla', 18, 45.6))
-        self.assertEqual(sorted(list(t.nodes.keys())), [3,6,9])
+        # self.assertEqual(sorted(list(t.nodes.keys())), [3,6,9])
+        self.assertEqual(sorted(list(t.nodes.keys())), [6,9])
         
         
     def test_updates(self):
